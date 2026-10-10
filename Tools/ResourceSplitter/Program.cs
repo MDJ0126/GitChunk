@@ -90,6 +90,10 @@ class Program
             Console.WriteLine("분할할 50 MiB 초과 파일이 없습니다. 원본 파일은 그대로 유지됩니다.");
             return;
         }
+        // Protect each split asset's companion metadata even when it is small.
+        var companionMetadata = files.Select(path => Inside(root, Path.GetRelativePath(root, path) + ".meta"))
+            .Where(File.Exists).ToList();
+        files.AddRange(companionMetadata);
         var staging = root;
         var createdParts = new List<string>();
         bool published = false;
@@ -158,7 +162,7 @@ class Program
                     throw new Exception("Original changed; refusing to delete: " + asset.Path);
             }
             var temporaryManifest = manifestPath + ".restore-" + Guid.NewGuid().ToString("N");
-            File.WriteAllText(temporaryManifest, JsonSerializer.Serialize(new Manifest(2, chunk, assets), JsonOptions));
+            File.WriteAllText(temporaryManifest, JsonSerializer.Serialize(new Manifest(3, chunk, assets), JsonOptions));
             try { File.Move(temporaryManifest, manifestPath); }
             finally { if (File.Exists(temporaryManifest)) File.Delete(temporaryManifest); }
             published = true;
@@ -189,7 +193,7 @@ class Program
         bool inline = File.Exists(inlineManifest);
         var output = inline ? root : Inside(root, "ResourceParts");
         var manifest = JsonSerializer.Deserialize<Manifest>(File.ReadAllText(inline ? inlineManifest : Inside(output, "manifest.json"))) ?? throw new Exception("Invalid manifest.");
-        if (manifest.Version != (inline ? 2 : 1) || manifest.Files == null || manifest.Files.Count == 0) throw new Exception("Unsupported/empty manifest.");
+        if ((inline ? manifest.Version is not (2 or 3) : manifest.Version != 1) || manifest.Files == null || manifest.Files.Count == 0) throw new Exception("Unsupported/empty manifest.");
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         // Validate every part and destination before restoring any file.
         foreach (var asset in manifest.Files)
@@ -198,7 +202,10 @@ class Program
             if (!seen.Add(target) || asset.Parts == null || asset.Parts.Count == 0 || asset.Size < 0 || asset.Parts.Sum(p => p.Size) != asset.Size)
                 throw new Exception("Invalid asset entry: " + asset.Path);
             if (Reserved(Path.GetRelativePath(root, target))) throw new Exception("Protected destination: " + asset.Path);
-            if (File.Exists(target) && (new FileInfo(target).Length != asset.Size || Hash(target) != asset.Sha256))
+            bool protectedMeta = manifest.Version == 3 && asset.Path.EndsWith(".meta", StringComparison.OrdinalIgnoreCase);
+            if (protectedMeta && !manifest.Files.Any(other => other.Path.Equals(asset.Path[..^5], StringComparison.OrdinalIgnoreCase)))
+                throw new Exception("Metadata has no paired asset: " + asset.Path);
+            if (!protectedMeta && File.Exists(target) && (new FileInfo(target).Length != asset.Size || Hash(target) != asset.Sha256))
                 throw new Exception("Existing file differs; move it to a backup before restoring: " + asset.Path);
             foreach (var part in asset.Parts)
             {
@@ -208,9 +215,17 @@ class Program
                     throw new Exception("Missing/corrupt part: " + part.Path);
             }
         }
-        foreach (var asset in manifest.Files)
+        // Restore original metadata first; retain any regenerated metadata separately.
+        foreach (var asset in manifest.Files.OrderByDescending(asset => asset.Path.EndsWith(".meta", StringComparison.OrdinalIgnoreCase)))
         {
             var target = Inside(root, asset.Path);
+            if (manifest.Version == 3 && asset.Path.EndsWith(".meta", StringComparison.OrdinalIgnoreCase) && File.Exists(target)
+                && (new FileInfo(target).Length != asset.Size || Hash(target) != asset.Sha256))
+            {
+                var backup = target + ".restore-" + Guid.NewGuid().ToString("N");
+                File.Move(target, backup);
+                Console.WriteLine("Conflicting metadata retained: " + backup);
+            }
             if (File.Exists(target)) { Console.WriteLine("Verified existing: " + asset.Path); continue; }
             Directory.CreateDirectory(Path.GetDirectoryName(target)!);
             var temp = target + ".restore-" + Guid.NewGuid().ToString("N");
@@ -254,7 +269,7 @@ class Program
                 Console.WriteLine("다른 폴더를 사용하려면 프로젝트 경로를 입력하세요:");
                 var selectedRoot = Console.ReadLine()?.Trim().Trim('"');
                 if (!string.IsNullOrEmpty(selectedRoot)) root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(selectedRoot));
-                Console.WriteLine($"대상: {root}\n1. 분할 (Split): 50 MiB 초과 파일만 원본 옆에 조각 저장, 검증 후 원본 삭제\n2. 합치기 (Restore): 원본 파일 복원\n0. 종료\n50 MiB 이하 파일과 .meta는 유지 / 캐시 제외 / 복원 전 에디터 실행 금지 / 백업하고 편집기를 닫고 실행해 주세요.");
+                Console.WriteLine($"대상: {root}\n1. 분할 (Split): 50 MiB 초과 파일과 연결된 .meta를 원본 옆에 조각 저장, 검증 후 원본 삭제\n2. 합치기 (Restore): 원본과 원래 .meta 함께 복원\n0. 종료\n분할 대상 외의 작은 파일과 .meta는 유지 / 캐시 제외 / 복원 전 에디터 실행 금지 / 백업하고 편집기를 닫고 실행해 주세요.");
                 mode = Console.ReadLine();
                 if (mode == "0") return 0;
             }
