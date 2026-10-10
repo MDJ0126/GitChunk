@@ -34,3 +34,4 @@ try {
     if ($LASTEXITCODE -ne 1 -or (Get-FileHash Assets/image.bin.part000001).Hash -ne $collisionHash -or !(Test-Path Assets/image.bin)) { throw 'Collision protection failed' }
     'PASS: inline layout, originals removed, file/folder meta preserved, repeated split guard, corrupt parts, restore hashes, cleanup, failure rollback, collision protection'
 } finally { Pop-Location }
+exit 0
