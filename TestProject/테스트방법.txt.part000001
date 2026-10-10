@@ -1,0 +1,8 @@
+﻿이 폴더는 테스트용이며 실제 Unity/Unreal 프로젝트는 아닙니다.
+1. 바탕화면 ResourceSplitter 폴더의 ResourceSplitter.exe를 실행합니다.
+2. 프로젝트 경로로 C:\Users\ehdwn\Desktop\ResourceSplitter_TestProject 를 입력합니다.
+3. 1번 분할: 큰파일_60MiB.bin은 49 MiB와 11 MiB의 조각 2개가 됩니다. 작은 파일은 조각 하나입니다.
+4. 원본은 보존됩니다. 합치기로 실제 복원을 시험하려면 분할 완료 후 큰파일_60MiB.bin을 프로젝트 밖에 옮겨 두세요.
+5. 다시 실행해 같은 경로에서 2번 합치기를 선택하면 원래 위치에 복원됩니다.
+6. Library 폴더는 기본 제외이므로 ResourceParts에 생기지 않습니다.
+7. expected-sha256.txt에 예제 원본의 해시가 기록되어 있습니다.
