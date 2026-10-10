@@ -134,15 +134,47 @@ class Program
             File.WriteAllText(Path.Combine(staging, "manifest.json"), JsonSerializer.Serialize(new Manifest(1, chunk, assets), JsonOptions));
             File.WriteAllText(Path.Combine(staging, ".gitattributes"), "* -filter -diff -merge -text\n");
             File.WriteAllText(Path.Combine(staging, ".gitignore"), "!*\n");
+            // Verify all saved parts and unchanged originals before publishing or deleting.
+            foreach (var asset in assets)
+            {
+                using var restoredHash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+                foreach (var part in asset.Parts)
+                {
+                    var path = Inside(staging, part.Path);
+                    if (new FileInfo(path).Length != part.Size || Hash(path) != part.Sha256)
+                        throw new Exception("Saved part verification failed: " + part.Path);
+                    using var stream = File.OpenRead(path);
+                    int count;
+                    while ((count = stream.Read(buffer, 0, buffer.Length)) > 0) restoredHash.AppendData(buffer, 0, count);
+                }
+                if (Convert.ToHexString(restoredHash.GetHashAndReset()) != asset.Sha256)
+                    throw new Exception("Saved asset verification failed: " + asset.Path);
+                var original = Inside(root, asset.Path);
+                if (new FileInfo(original).Length != asset.Size || Hash(original) != asset.Sha256)
+                    throw new Exception("Original changed; refusing to delete: " + asset.Path);
+            }
             var backup = Inside(root, "ResourceParts.previous-" + Guid.NewGuid().ToString("N"));
             if (Directory.Exists(output)) Directory.Move(output, backup);
             try { Directory.Move(staging, output); }
             catch { if (Directory.Exists(backup)) Directory.Move(backup, output); throw; }
             // Keep previous snapshots intact; the user can remove them after verification.
-            Console.WriteLine($"Split complete: {assets.Count} files. Original files preserved.");
+            foreach (var asset in assets)
+            {
+                var original = Inside(root, asset.Path);
+                if (new FileInfo(original).Length != asset.Size || Hash(original) != asset.Sha256)
+                    throw new Exception("Original changed; verified parts retained, deletion stopped: " + asset.Path);
+                File.Delete(original);
+                Console.WriteLine("Original removed: " + asset.Path);
+            }
+            Console.WriteLine($"Split complete: {assets.Count} files. Parts verified; originals removed.");
             if (Directory.Exists(backup)) Console.WriteLine("Previous snapshot retained: " + backup);
         }
-        catch { Console.Error.WriteLine("Incomplete staging folder (not used for restore): " + staging); throw; }
+        catch
+        {
+            if (Directory.Exists(staging)) Console.Error.WriteLine("Incomplete staging folder (not used for restore): " + staging);
+            else Console.Error.WriteLine("Published parts retained at: " + output);
+            throw;
+        }
     }
     static void Join(string root)
     {
@@ -201,7 +233,7 @@ class Program
                 Console.WriteLine("다른 폴더를 사용하려면 프로젝트 경로를 입력하세요:");
                 var selectedRoot = Console.ReadLine()?.Trim().Trim('"');
                 if (!string.IsNullOrEmpty(selectedRoot)) root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(selectedRoot));
-                Console.WriteLine($"대상: {root}\n1. 분할 (Split)\n2. 합치기 (Restore)\n0. 종료\n기본: 전체 프로젝트, 캐시 제외 / 원본 보존 / 편집기를 닫고 실행해 주세요.");
+                Console.WriteLine($"대상: {root}\n1. 분할 (Split): 조각 검증 후 원본 삭제\n2. 합치기 (Restore): 원본 파일 복원\n0. 종료\n기본: 전체 프로젝트, 캐시 제외 / 분할 후 원본 삭제 / 백업하고 편집기를 닫고 실행해 주세요.");
                 mode = Console.ReadLine();
                 if (mode == "0") return 0;
             }
