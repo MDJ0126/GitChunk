@@ -194,14 +194,23 @@ class Program
             string? mode;
             if (interactive)
             {
-                Console.WriteLine("Resource Splitter / 범용 프로젝트 파일 분할 도구\n프로젝트 경로 (Enter: 현재 작업 폴더):");
+                Console.WriteLine("Resource Splitter / 범용 프로젝트 파일 분할 도구");
+                Console.WriteLine($"현재 작업 폴더: {root}");
+                Console.WriteLine("Enter를 누르면 위 폴더를 대상으로 실행합니다.");
+                Console.WriteLine("터미널에서는 명령을 실행한 폴더가 기준입니다.");
+                Console.WriteLine("다른 폴더를 사용하려면 프로젝트 경로를 입력하세요:");
                 var selectedRoot = Console.ReadLine()?.Trim().Trim('"');
                 if (!string.IsNullOrEmpty(selectedRoot)) root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(selectedRoot));
                 Console.WriteLine($"대상: {root}\n1. 분할 (Split)\n2. 합치기 (Restore)\n0. 종료\n기본: 전체 프로젝트, 캐시 제외 / 원본 보존 / 편집기를 닫고 실행해 주세요.");
                 mode = Console.ReadLine();
                 if (mode == "0") return 0;
             }
-            else mode = args[0];
+            else
+            {
+                mode = args[0];
+                Console.WriteLine($"대상: {root}");
+                if (args.Length < 2) Console.WriteLine("경로를 지정하지 않아 현재 작업 폴더를 사용합니다.");
+            }
             if (!Directory.Exists(root)) throw new Exception("Project folder does not exist: " + root);
             long chunk = args.Length > 2 ? long.Parse(args[2]) : 49L * 1024 * 1024;
             if (chunk < 1 || chunk > 49L * 1024 * 1024) throw new Exception("Chunk size must be 1..51380224 bytes (49 MiB).");
