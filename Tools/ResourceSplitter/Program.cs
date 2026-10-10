@@ -82,8 +82,14 @@ class Program
     {
         var manifestPath = Inside(root, "ResourceSplitter.manifest.json");
         if (File.Exists(manifestPath)) throw new Exception("Inline parts already exist; restore them before splitting again.");
-        var files = Resources(root, LoadSettings(root)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToList();
-        if (files.Count == 0) throw new Exception("No resources found.");
+        var files = Resources(root, LoadSettings(root)).Distinct(StringComparer.OrdinalIgnoreCase)
+            .Where(path => new FileInfo(path).Length > 50L * 1024 * 1024)
+            .OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToList();
+        if (files.Count == 0)
+        {
+            Console.WriteLine("분할할 50 MiB 초과 파일이 없습니다. 원본 파일은 그대로 유지됩니다.");
+            return;
+        }
         var staging = root;
         var createdParts = new List<string>();
         bool published = false;
@@ -248,7 +254,7 @@ class Program
                 Console.WriteLine("다른 폴더를 사용하려면 프로젝트 경로를 입력하세요:");
                 var selectedRoot = Console.ReadLine()?.Trim().Trim('"');
                 if (!string.IsNullOrEmpty(selectedRoot)) root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(selectedRoot));
-                Console.WriteLine($"대상: {root}\n1. 분할 (Split): 원본 옆에 조각 저장, 검증 후 원본 삭제\n2. 합치기 (Restore): 원본 파일 복원\n0. 종료\n기본: 전체 프로젝트, 캐시 제외 / .meta 유지 / 분할 후 원본 삭제 / 복원 전 에디터 실행 금지 / 백업하고 편집기를 닫고 실행해 주세요.");
+                Console.WriteLine($"대상: {root}\n1. 분할 (Split): 50 MiB 초과 파일만 원본 옆에 조각 저장, 검증 후 원본 삭제\n2. 합치기 (Restore): 원본 파일 복원\n0. 종료\n50 MiB 이하 파일과 .meta는 유지 / 캐시 제외 / 복원 전 에디터 실행 금지 / 백업하고 편집기를 닫고 실행해 주세요.");
                 mode = Console.ReadLine();
                 if (mode == "0") return 0;
             }
