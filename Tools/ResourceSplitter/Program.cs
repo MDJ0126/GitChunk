@@ -53,7 +53,7 @@ class Program
     static bool Excluded(string root, string path, Settings settings)
     {
         var relative = Path.GetRelativePath(root, path).Replace('\\', '/');
-        if (Reserved(relative)) return true;
+        if (Reserved(relative) || relative.EndsWith(".meta", StringComparison.OrdinalIgnoreCase) || relative is ".gitattributes" or ".gitignore" || System.Text.RegularExpressions.Regex.IsMatch(relative, @"\.part\d{6,}$")) return true;
         if (relative.Split('/').Any(segment => settings.ExcludeDirectories.Contains(segment, StringComparer.OrdinalIgnoreCase))) return true;
         return settings.ExcludeFilePatterns.Any(pattern => System.IO.Enumeration.FileSystemName.MatchesSimpleExpression(pattern, Path.GetFileName(path), ignoreCase: true));
     }
@@ -80,13 +80,13 @@ class Program
     }
     static void Split(string root, long chunk)
     {
-        var output = Inside(root, "ResourceParts");
-        var oldManifest = Path.Combine(output, "manifest.json");
-        if (Directory.Exists(output) && !File.Exists(oldManifest)) throw new Exception("ResourceParts exists without a manifest; refusing to replace it.");
+        var manifestPath = Inside(root, "ResourceSplitter.manifest.json");
+        if (File.Exists(manifestPath)) throw new Exception("Inline parts already exist; restore them before splitting again.");
         var files = Resources(root, LoadSettings(root)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToList();
         if (files.Count == 0) throw new Exception("No resources found.");
-        var staging = Inside(root, "ResourceParts.staging-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(staging);
+        var staging = root;
+        var createdParts = new List<string>();
+        bool published = false;
         try
         {
             var assets = new List<Asset>();
@@ -114,8 +114,9 @@ class Program
                     Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
                     using var partHash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
                     long written = 0;
-                    using (var stream = File.Create(destination))
+                    using (var stream = new FileStream(destination, FileMode.CreateNew, FileAccess.Write, FileShare.None))
                     {
+                        createdParts.Add(destination);
                         while (written < chunk)
                         {
                             var n = input.Read(buffer, 0, (int)Math.Min(buffer.Length, chunk - written));
@@ -131,9 +132,6 @@ class Program
                 assets.Add(new Asset(relative, size, Convert.ToHexString(fullHash.GetHashAndReset()), parts));
                 Console.WriteLine($"[{assets.Count}/{files.Count}] {relative} ({parts.Count} parts)");
             }
-            File.WriteAllText(Path.Combine(staging, "manifest.json"), JsonSerializer.Serialize(new Manifest(1, chunk, assets), JsonOptions));
-            File.WriteAllText(Path.Combine(staging, ".gitattributes"), "* -filter -diff -merge -text\n");
-            File.WriteAllText(Path.Combine(staging, ".gitignore"), "!*\n");
             // Verify all saved parts and unchanged originals before publishing or deleting.
             foreach (var asset in assets)
             {
@@ -153,11 +151,11 @@ class Program
                 if (new FileInfo(original).Length != asset.Size || Hash(original) != asset.Sha256)
                     throw new Exception("Original changed; refusing to delete: " + asset.Path);
             }
-            var backup = Inside(root, "ResourceParts.previous-" + Guid.NewGuid().ToString("N"));
-            if (Directory.Exists(output)) Directory.Move(output, backup);
-            try { Directory.Move(staging, output); }
-            catch { if (Directory.Exists(backup)) Directory.Move(backup, output); throw; }
-            // Keep previous snapshots intact; the user can remove them after verification.
+            var temporaryManifest = manifestPath + ".restore-" + Guid.NewGuid().ToString("N");
+            File.WriteAllText(temporaryManifest, JsonSerializer.Serialize(new Manifest(2, chunk, assets), JsonOptions));
+            try { File.Move(temporaryManifest, manifestPath); }
+            finally { if (File.Exists(temporaryManifest)) File.Delete(temporaryManifest); }
+            published = true;
             foreach (var asset in assets)
             {
                 var original = Inside(root, asset.Path);
@@ -167,20 +165,25 @@ class Program
                 Console.WriteLine("Original removed: " + asset.Path);
             }
             Console.WriteLine($"Split complete: {assets.Count} files. Parts verified; originals removed.");
-            if (Directory.Exists(backup)) Console.WriteLine("Previous snapshot retained: " + backup);
+
         }
         catch
         {
-            if (Directory.Exists(staging)) Console.Error.WriteLine("Incomplete staging folder (not used for restore): " + staging);
-            else Console.Error.WriteLine("Published parts retained at: " + output);
+            if (!published)
+            {
+                foreach (var part in createdParts) File.Delete(part);
+            }
+            else Console.Error.WriteLine("Verified inline parts retained; use restore: " + manifestPath);
             throw;
         }
     }
     static void Join(string root)
     {
-        var output = Inside(root, "ResourceParts");
-        var manifest = JsonSerializer.Deserialize<Manifest>(File.ReadAllText(Inside(output, "manifest.json"))) ?? throw new Exception("Invalid manifest.");
-        if (manifest.Version != 1 || manifest.Files == null || manifest.Files.Count == 0) throw new Exception("Unsupported/empty manifest.");
+        var inlineManifest = Inside(root, "ResourceSplitter.manifest.json");
+        bool inline = File.Exists(inlineManifest);
+        var output = inline ? root : Inside(root, "ResourceParts");
+        var manifest = JsonSerializer.Deserialize<Manifest>(File.ReadAllText(inline ? inlineManifest : Inside(output, "manifest.json"))) ?? throw new Exception("Invalid manifest.");
+        if (manifest.Version != (inline ? 2 : 1) || manifest.Files == null || manifest.Files.Count == 0) throw new Exception("Unsupported/empty manifest.");
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         // Validate every part and destination before restoring any file.
         foreach (var asset in manifest.Files)
@@ -215,6 +218,18 @@ class Program
             }
             finally { if (File.Exists(temp)) File.Delete(temp); }
         }
+        if (inline)
+        {
+            foreach (var asset in manifest.Files)
+            {
+                var target = Inside(root, asset.Path);
+                if (new FileInfo(target).Length != asset.Size || Hash(target) != asset.Sha256)
+                    throw new Exception("Restored file changed; parts retained: " + asset.Path);
+            }
+            foreach (var asset in manifest.Files)
+                foreach (var part in asset.Parts) File.Delete(Inside(root, part.Path));
+            File.Delete(inlineManifest);
+        }
         Console.WriteLine("Restore complete. All hashes verified.");
     }
     static int Main(string[] args)
@@ -233,7 +248,7 @@ class Program
                 Console.WriteLine("다른 폴더를 사용하려면 프로젝트 경로를 입력하세요:");
                 var selectedRoot = Console.ReadLine()?.Trim().Trim('"');
                 if (!string.IsNullOrEmpty(selectedRoot)) root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(selectedRoot));
-                Console.WriteLine($"대상: {root}\n1. 분할 (Split): 조각 검증 후 원본 삭제\n2. 합치기 (Restore): 원본 파일 복원\n0. 종료\n기본: 전체 프로젝트, 캐시 제외 / 분할 후 원본 삭제 / 백업하고 편집기를 닫고 실행해 주세요.");
+                Console.WriteLine($"대상: {root}\n1. 분할 (Split): 원본 옆에 조각 저장, 검증 후 원본 삭제\n2. 합치기 (Restore): 원본 파일 복원\n0. 종료\n기본: 전체 프로젝트, 캐시 제외 / .meta 유지 / 분할 후 원본 삭제 / 복원 전 에디터 실행 금지 / 백업하고 편집기를 닫고 실행해 주세요.");
                 mode = Console.ReadLine();
                 if (mode == "0") return 0;
             }
@@ -255,4 +270,3 @@ class Program
         finally { if (interactive) { Console.WriteLine("Enter 키를 누르면 종료합니다."); Console.ReadLine(); } }
     }
 }
-
