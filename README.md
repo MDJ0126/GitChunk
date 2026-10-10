@@ -9,7 +9,7 @@ Git LFS 없이 Unity·Unreal 프로젝트 등의 대용량 리소스를 일반 G
 ## 사용 방법
 
 1. Windows용 .NET 9 Runtime을 설치합니다.
-2. `ResourceSplitter.exe`를 실행하고 대상 프로젝트 경로를 입력합니다. Enter를 누르면 실행 파일이 있는 폴더를 사용합니다.
+2. `ResourceSplitter.exe`를 실행하고 대상 프로젝트 경로를 입력합니다. Enter를 누르면 현재 작업 폴더를 사용합니다. 터미널에서는 실행 명령을 입력한 폴더가 기준입니다.
 3. `1`은 분할, `2`는 복원입니다.
 
 다른 폴더로 옮길 때는 `.exe`, `.dll`, `.runtimeconfig.json`, `.deps.json` 네 파일을 함께 복사하세요.
