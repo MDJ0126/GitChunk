@@ -18,7 +18,7 @@ static partial class GitIntegration
         foreach (var line in text.Replace("\r\n", "\n").Split('\n')) {
             if (line is "# GitChunk automatic storage" or "# ResourceSplitter automatic storage") { managed = true; continue; }
             if (line == "# GitChunk converted LFS files") { managed = false; continue; }
-            if (managed && generated.Contains(line)) continue;
+            if (generated.Contains(line) && (managed || line.StartsWith(".gitchunk/", StringComparison.Ordinal) || line.StartsWith(".resourcesplitter/", StringComparison.Ordinal) || line.StartsWith(".chunkignore ", StringComparison.Ordinal))) continue;
             if (line.TrimStart().StartsWith('#')) { result.Add(line); continue; }
             if (Regex.IsMatch(line, @"\sfilter=(?:gitchunk|resourcesplitter)(?:\s|$)")) {
                 var stripped = Regex.Replace(line, @"\sfilter=(?:gitchunk|resourcesplitter)(?=\s|$)", "");
@@ -42,8 +42,16 @@ static partial class GitIntegration
         var actual = Path.GetFullPath(Text("rev-parse", "--show-toplevel"));
         if (!actual.Equals(Path.TrimEndingDirectorySeparator(Path.GetFullPath(root)), FileSystemPaths.Comparison))
             throw new Exception("Specify the Git repository root.");
-        if (Text("--no-optional-locks", "status", "--porcelain", "--untracked-files=no").Length != 0)
-            throw new Exception("Uninstall requires a clean tracked working tree and index. Commit or stash changes first.");
+        var status = Encoding.UTF8.GetString(Git(null, "--no-optional-locks", "status", "--porcelain", "-z", "--untracked-files=no"));
+        foreach (var change in status.Split('\0', StringSplitOptions.RemoveEmptyEntries)) {
+            var path = change.Length >= 4 ? change[3..] : "";
+            // Updates replace the tracked runtime. It is archived during uninstall,
+            // so an executable-only modification does not endanger user edits.
+            var updatedRuntime = change.Length >= 4 && change[..2] is " M" or "M " or "MM"
+                && ToolPath(path) && (path.StartsWith(".gitchunk/", StringComparison.Ordinal) || path.StartsWith(".resourcesplitter/", StringComparison.Ordinal));
+            if (!updatedRuntime)
+                throw new Exception("Uninstall requires a clean tracked working tree and index except for updated GitChunk executables. Commit or stash changes first: " + path);
+        }
         var entries = IndexedAssets();
         var pointers = Pointers(entries.Where(e => e.Size <= 1024 * 1024).Select(e => e.Oid));
         var assets = entries.Where(e => pointers.ContainsKey(e.Oid)).ToList();
@@ -109,8 +117,8 @@ static partial class GitIntegration
             foreach (var path in attributes) if (File.Exists(path))
                 File.WriteAllText(path, WithoutChunkAttributes(File.ReadAllText(path)), new UTF8Encoding(false));
             if (File.Exists(ignore)) {
-                var text = File.ReadAllText(ignore).Replace("\r\n", "\n");
-                text = text.Replace("# GitChunk chunk cache (required chunks are staged by the hook)\n/.gitchunk/objects/\n", "");
+                var text = File.ReadAllText(ignore);
+                text = Regex.Replace(text, @"(?m)^# GitChunk chunk cache \(required chunks are staged by the hook\)\r?\n/\.gitchunk/objects/\r?\n", "");
                 File.WriteAllText(ignore, text, new UTF8Encoding(false));
             }
             foreach (var driver in new[] { "gitchunk", "resourcesplitter" })

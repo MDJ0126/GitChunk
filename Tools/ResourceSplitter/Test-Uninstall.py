@@ -2,6 +2,7 @@
 import hashlib
 import json
 import os
+import shutil
 from pathlib import Path
 import subprocess
 import sys
@@ -43,9 +44,34 @@ def snapshot(root):
 
 with tempfile.TemporaryDirectory(prefix='GitChunk-uninstall-') as temp:
     base = Path(temp).resolve()
+    # Exercise the user's literal command after an executable-only update.
+    command_dir = base / 'commands'; command_dir.mkdir()
+    command = command_dir / ('git-chunk.exe' if os.name == 'nt' else 'git-chunk')
+    shutil.copy2(tool, command)
+    os.environ['PATH'] = str(command_dir) + os.pathsep + os.environ['PATH']
+    for staged in (False, True):
+        root = base / ('updated-staged' if staged else 'updated'); init(root); commit(root)
+        runtime = next((root / '.gitchunk').glob('GitChunk*'))
+        updated = runtime.read_bytes() + b'updated runtime regression fixture'
+        runtime.write_bytes(updated)
+        if staged:
+            run(root, 'git', 'add', str(runtime))
+        user = root / 'user.txt'; user.write_text('original'); run(root, 'git', 'add', 'user.txt'); run(root, 'git', 'commit', '-m', 'user file')
+        # Keep both an executable update and an unrelated user edit dirty.
+        runtime.write_bytes(updated + b' second update')
+        user.write_text('unsaved edit')
+        assert b'clean tracked' in run(root, 'git', 'chunk', 'uninstall', ok=False)
+        assert user.read_text() == 'unsaved edit' and runtime.exists()
+        run(root, 'git', 'restore', 'user.txt')
+        if staged:
+            run(root, 'git', 'add', str(runtime))
+        archived = runtime.read_bytes()
+        run(root, 'git', 'chunk', 'uninstall')
+        assert not (root / '.gitchunk').exists()
+        assert any(p.read_bytes() == archived for p in (root / '.git/gitchunk').glob('uninstall-*/.gitchunk/GitChunk*'))
     # FPSGame-like project: no chunked files. Preserve unrelated settings and custom hooks.
     root = base / 'empty'; init(root)
-    (root / '.gitattributes').write_text((root / '.gitattributes').read_text() + '\n*.txt text eol=lf\n*.psd filter=lfs diff=lfs merge=lfs -text\n', encoding='utf-8')
+    (root / '.gitattributes').write_text((root / '.gitattributes').read_text() + '\n*.txt text eol=lf\n*.psd filter=lfs diff=lfs merge=lfs -text\n# GitChunk converted LFS files\n.gitchunk/chunks.txt -filter text eol=lf diff\n.chunkignore -filter text eol=lf diff\n', encoding='utf-8')
     (root / '.gitignore').write_text((root / '.gitignore').read_text() + '\nuser-cache/\n', encoding='utf-8')
     note = root / '.gitchunk/user-note.txt'; note.write_text('preserve this user file')
     commit(root)
@@ -68,7 +94,7 @@ with tempfile.TemporaryDirectory(prefix='GitChunk-uninstall-') as temp:
     assert run(root, 'git', 'config', 'alias.user-test').strip() == b'status'
     attrs = (root / '.gitattributes').read_text()
     assert '*.txt text eol=lf' in attrs and 'filter=lfs' in attrs
-    assert 'filter=gitchunk' not in attrs and '.gitchunk/' not in attrs
+    assert 'filter=gitchunk' not in attrs and '.gitchunk/' not in attrs and '.chunkignore' not in attrs
     assert 'user-cache/' in (root / '.gitignore').read_text()
     assert run(root, tool, 'status', str(root)).strip() == b'not-installed'
     assert any(p.read_text() == 'preserve this user file' for p in (root / '.git/gitchunk').glob('uninstall-*/.gitchunk/user-note.txt'))
