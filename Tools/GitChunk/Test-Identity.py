@@ -14,7 +14,7 @@ def run(root, *args, data=None, ok=True):
     return p
 
 with tempfile.TemporaryDirectory(prefix='GitChunk-identity-') as folder:
-    root = Path(folder)
+    root = Path(folder).resolve()
     run(root, 'git', 'init')
     run(root, tool, 'git-install', str(root))
     data = b'identity-test' + bytes(50 * 1024 * 1024)
