@@ -5,21 +5,60 @@ using System.Text.RegularExpressions;
 static partial class GitIntegration
 {
     record LfsAsset(string Path, string Oid, long Size, byte[] Pointer);
-    static List<LfsAsset> LfsAssets()
+    record IndexedAsset(string Path, string Oid, long Size);
+    static List<IndexedAsset> IndexedAssets()
     {
-        var assets = new List<LfsAsset>();
+        var paths = new List<(string Path, string Oid)>();
         foreach (var entry in Text("ls-files", "--stage", "-z").Split('\0', StringSplitOptions.RemoveEmptyEntries))
         {
             var tab = entry.IndexOf('\t'); var fields = entry[..tab].Split(' ');
             if (fields[2] != "0") throw new Exception("Resolve merge conflicts before installation.");
-            if (fields[0] != "100644" && fields[0] != "100755") continue;
-            if (long.Parse(Text("cat-file", "-s", fields[1])) > 1024) continue;
-            var bytes = Git(null, "cat-file", "blob", fields[1]);
+            if (fields[0] is "100644" or "100755") paths.Add((entry[(tab + 1)..], fields[1]));
+        }
+        if (paths.Count == 0) return new();
+        var sizes = new Dictionary<string, long>();
+        var report = TextFromBatch(paths.Select(p => p.Oid).Distinct());
+        foreach (var line in report.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var fields = line.TrimEnd('\r').Split(' ');
+            if (fields.Length != 3 || fields[1] != "blob") throw new Exception("Invalid indexed blob metadata.");
+            sizes[fields[0]] = long.Parse(fields[2]);
+        }
+        return paths.Select(p => new IndexedAsset(p.Path, p.Oid, sizes[p.Oid])).ToList();
+    }
+    static string TextFromBatch(IEnumerable<string> ids) => Encoding.UTF8.GetString(Git(Encoding.ASCII.GetBytes(string.Join("\n", ids) + "\n"), "cat-file", "--batch-check=%(objectname) %(objecttype) %(objectsize)"));
+    static Dictionary<string, byte[]> SmallIndexedBlobs(IEnumerable<IndexedAsset> entries)
+    {
+        var result = new Dictionary<string, byte[]>();
+        foreach (var group in entries.Where(e => e.Size <= 1024).Select(e => e.Oid).Distinct().Chunk(256))
+        {
+            var data = Git(Encoding.ASCII.GetBytes(string.Join("\n", group) + "\n"), "cat-file", "--batch");
+            int position = 0;
+            foreach (var id in group)
+            {
+                var newline = Array.IndexOf(data, (byte)'\n', position);
+                if (newline < 0) throw new Exception("Invalid Git batch response.");
+                var fields = Encoding.ASCII.GetString(data, position, newline - position).Split(' ');
+                if (fields.Length != 3 || fields[0] != id || fields[1] != "blob") throw new Exception("Missing indexed blob.");
+                var size = int.Parse(fields[2]); position = newline + 1;
+                if (size < 0 || size > 1024 || position + size >= data.Length) throw new Exception("Invalid indexed blob size.");
+                result[id] = data.AsSpan(position, size).ToArray(); position += size + 1;
+            }
+        }
+        return result;
+    }
+    static List<LfsAsset> LfsAssets()
+    {
+        var assets = new List<LfsAsset>();
+        var entries = IndexedAssets(); var blobs = SmallIndexedBlobs(entries);
+        foreach (var entry in entries.Where(e => e.Size <= 1024))
+        {
+            var bytes = blobs[entry.Oid];
             var content = Encoding.UTF8.GetString(bytes).Replace("\r\n", "\n");
             if (!content.StartsWith("version https://git-lfs.github.com/spec/v1\n")) continue;
             var match = Regex.Match(content, @"\Aversion https://git-lfs.github.com/spec/v1\noid sha256:([0-9a-f]{64})\nsize ([0-9]+)\n?\z");
-            if (!match.Success || !long.TryParse(match.Groups[2].Value, out var size)) throw new Exception("Unsupported LFS pointer: " + entry[(tab + 1)..]);
-            assets.Add(new(entry[(tab + 1)..], match.Groups[1].Value, size, bytes));
+            if (!match.Success || !long.TryParse(match.Groups[2].Value, out var size)) throw new Exception("Unsupported LFS pointer: " + entry.Path);
+            assets.Add(new(entry.Path, match.Groups[1].Value, size, bytes));
         }
         return assets;
     }
@@ -117,7 +156,22 @@ static partial class GitIntegration
                 }
                 else if (!Hash(staged).Equals(asset.Oid, StringComparison.OrdinalIgnoreCase)) throw new Exception("Converted original hash mismatch: " + asset.Path);
             }
+            int ordinaryLarge = 0;
+            foreach (var entry in IndexedAssets().Where(e => e.Size > Threshold && !ToolPath(e.Path) && ChunkRules.Matches(actual, e.Path)))
+            {
+                var path = SafePath(actual, entry.Path);
+                if (Text("hash-object", "--no-filters", "--", path) != entry.Oid) throw new Exception("Existing large Git file differs from its indexed original: " + entry.Path);
+                string originalHash;
+                using (var input = File.OpenRead(path)) originalHash = Convert.ToHexString(SHA256.HashData(input));
+                Text("add", "--renormalize", "--", entry.Path);
+                var staged = Git(null, "show", ":" + entry.Path);
+                var pointer = Parse(staged) ?? throw new Exception("Existing large Git file was not chunked: " + entry.Path);
+                if (pointer.Size != entry.Size || pointer.Sha256 != originalHash) throw new Exception("Existing large Git file hash mismatch: " + entry.Path);
+                Smudge(new MemoryStream(staged), Stream.Null);
+                ordinaryLarge++;
+            }
             Prepare();
+            if (ordinaryLarge > 0) Console.WriteLine($"Converted and verified {ordinaryLarge} existing large ordinary Git files.");
             foreach (var path in attributeFiles) Text("add", "--", Path.GetRelativePath(actual, path));
             Text("add", "--", ".gitattributes", ".gitignore", ".gitchunk/rules.txt", ".gitchunk/presets");
             Console.WriteLine($"Converted and verified {assets.Count} current LFS files. Review git diff --cached, then commit and push. No commit or push was performed. Past commits and server LFS storage remain unchanged. Backup: {metadata}");

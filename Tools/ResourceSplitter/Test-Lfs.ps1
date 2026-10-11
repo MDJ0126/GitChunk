@@ -20,6 +20,9 @@ try {
     $stream = [IO.File]::Create("$PWD/large asset.bin")
     try { $stream.SetLength(52428801); $stream.WriteByte(42) } finally { $stream.Dispose() }
     Set-Content small.bin 'small original'
+    $ordinary = [IO.File]::Create("$PWD/ordinary.apk")
+    try { $ordinary.SetLength(62914560); $ordinary.WriteByte(99) } finally { $ordinary.Dispose() }
+    $ordinaryHash = (Get-FileHash ordinary.apk).Hash
     $hash = (Get-FileHash 'large asset.bin').Hash
     G add .
     G commit -m lfs
@@ -42,7 +45,8 @@ try {
     if (((G show ':small.bin') -join "`n") -ne 'small original') { throw 'Small LFS not converted' }
     if ((G check-attr filter -- nested/other.bin) -notlike '*: gitchunk') { throw 'Nested LFS attributes not converted' }
     if (((G show 'HEAD:large asset.bin') -join "`n") -notlike 'version https://git-lfs*') { throw 'History changed' }
-    if (@(G ls-files '.gitchunk/objects/*').Count -ne 2) { throw 'Chunks not staged' }
+    if (((G show ':ordinary.apk') -join "`n") -notlike 'resourcesplitter-pointer-v1*') { throw 'Existing ordinary large file not converted' }
+    if (@(G ls-files '.gitchunk/objects/*').Count -ne 4) { throw 'Chunks not staged' }
     G commit -m converted
     G push
     Set-Location ..
@@ -50,6 +54,7 @@ try {
     Set-Location restored
     E git-install "$PWD"
     if ((Get-FileHash 'large asset.bin').Hash -ne $hash) { throw 'Clone restoration failed' }
+    if ((Get-FileHash ordinary.apk).Hash -ne $ordinaryHash) { throw 'Ordinary large file clone restoration failed' }
     # Custom hooks are preserved, and failure does not alter the index.
     Set-Location ../writer
     Set-Content .git/hooks/pre-push '# custom hook'
