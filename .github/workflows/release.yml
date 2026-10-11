@@ -25,6 +25,8 @@ jobs:
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           python Tools/ResourceSplitter/Test-Rules.py publish/cli/GitChunk.exe
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          ./Tools/ResourceSplitter/Test-Lfs.ps1 -Executable publish/cli/GitChunk.exe
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
       - name: Package installer and portable commands
         shell: pwsh
         env:

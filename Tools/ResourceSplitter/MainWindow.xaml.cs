@@ -22,7 +22,7 @@ partial class MainWindow : Window
         FolderPath.TextChanged += async (_, _) => await RefreshInstallation();
         Activated += async (_, _) => { if (!busy) await RefreshInstallation(); };
         FolderPath.Text = Directory.GetCurrentDirectory();
-        Append("Select a repository, save your rules, and install Git Chunk.");
+        Append("Select a repository, save your rules, and install Git Chunk. Existing LFS files are converted and staged automatically; commit or stash tracked changes first. Past LFS history and server storage are preserved.");
     }
     string Root() => Path.TrimEndingDirectorySeparator(Path.GetFullPath(FolderPath.Text.Trim().Trim('"')));
     bool ValidRepository => installation is "installed" or "incomplete" or "legacy" or "not-installed";
@@ -35,7 +35,7 @@ partial class MainWindow : Window
             "installed" => "✓ Installed · Automatic chunking and restoration are enabled for this repository on this computer.",
             "legacy" => "A legacy installation was found. Upgrade to Git Chunk to migrate its storage.",
             "incomplete" => "Some settings are missing. Reinstall to repair them.",
-            "not-installed" => "Not installed · Installation also restores pointer files from a fresh clone.",
+            "not-installed" => "Not installed · Install to convert current LFS files or restore a fresh clone.",
             "not-root" => "Select the root folder of your Git repository.",
             "not-repository" => "The selected folder is not a Git repository.",
             _ => "Unable to check installation. Verify the folder path and Git installation."

@@ -19,6 +19,7 @@ jobs:
           Copy-Item publish/windows/GitChunk.exe GitChunk.exe -Force
           ./Tools/ResourceSplitter/Test-Unified.ps1
           ./Tools/ResourceSplitter/Test-Git.ps1
+          ./Tools/ResourceSplitter/Test-Lfs.ps1
           python Tools/ResourceSplitter/Test-Rules.py GitChunk.exe
       - uses: actions/upload-artifact@v4
         with:

@@ -2,7 +2,7 @@
 
 [한국어](README.ko.md)
 
-Automatically store large files as chunks in Git while keeping full originals locally. Requires Git; no .NET SDK needed.
+**Manage large assets without Git LFS.** Git stores chunks automatically while you work with full originals locally. No .NET SDK needed.
 
 ## Install
 
@@ -40,5 +40,25 @@ git commit -m "Configure Git Chunk"
 Then use Git as usual. The app also supports setup: select your project and click **Install Git Chunk**.
 
 Edit `.gitchunk/rules.txt` or use the app to choose files. Matching files over **50 MiB** become chunks of up to **49 MiB**. Do not delete `.gitchunk/objects`.
+
+## Convert an existing Git LFS project
+
+**Automatic LFS conversion is implemented in the current source and new local build; it is not yet in the public release.** Use the new build for conversion. To run `GitChunk.exe` directly, stay in the target repository root and replace the install command below with the actual executable path followed by `install`.
+
+1. In the target repository root, commit or stash tracked changes first. Downloading missing originals requires Git LFS and remote access.
+2. Run the commands below. Installation obtains missing originals, verifies size and SHA-256, converts LFS attributes and standard hooks, verifies conversion/restoration, and stages the result.
+
+```bash
+git chunk install
+git diff --cached
+git commit -m "Convert current LFS files to Git Chunk"
+git push
+```
+
+Current LFS files **over 50 MiB** become chunks; files at or below that size become ordinary Git files. Large LFS files excluded by chunk rules or custom commit/push hooks stop conversion with instructions. Installation never commits or pushes automatically. Failed conversion restores the original index, settings and hooks.
+
+**After conversion, edit originals and use add/commit/push as usual.** Adding files chunks them automatically; the commit hook includes required chunks. Pull/checkout restores originals automatically. On a new computer, clone and run `git chunk install` once.
+
+**Past commits and existing server LFS objects/storage usage are preserved.** Keep Git LFS and the corresponding originals to use historical LFS versions.
 
 [Distribution details](Packaging/README.md) · [Technical notes](INSTRUCTIONS.md)

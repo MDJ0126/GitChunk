@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 
 // The original path stores a small pointer in Git; chunk blobs are ordinary Git files.
 // Reading chunks by blob ID makes checkout independent of file checkout order.
-static class GitIntegration
+static partial class GitIntegration
 {
     const long Threshold = 50L * 1024 * 1024;
     const int ChunkSize = 49 * 1024 * 1024;
@@ -110,7 +110,9 @@ static class GitIntegration
             if (file.Length <= Threshold || (relative != null && !ChunkRules.Matches(Text("rev-parse", "--show-toplevel"), relative)))
             {
                 // Reject malformed reserved pointers instead of silently accepting them.
-                if (file.Length <= 1024 * 1024) { var b = new byte[(int)file.Length]; file.ReadExactly(b); Parse(b); output.Write(b); }
+                if (file.Length <= 1024 * 1024) { var b = new byte[(int)file.Length]; file.ReadExactly(b);
+                    if (Encoding.UTF8.GetString(b).StartsWith("version https://git-lfs.github.com/spec/v1\n")) throw new Exception("LFS pointer is not an original asset. Run git chunk install to convert current LFS files first.");
+                    Parse(b); output.Write(b); }
                 else file.CopyTo(output);
                 return;
             }
@@ -371,7 +373,7 @@ static class GitIntegration
                 if (p.Chunks.Any(c => !reachable.Contains(c.Oid))) throw new Exception("Push contains a pointer without committed chunks. Run GitChunk.exe git-prepare before committing.");
         }
     }
-    static void Install(string root)
+    static void InstallCore(string root)
     {
         Directory.SetCurrentDirectory(Path.GetFullPath(root));
         var actual = Path.GetFullPath(Text("rev-parse", "--show-toplevel"));
@@ -381,7 +383,7 @@ static class GitIntegration
         foreach (var name in new[] { "pre-commit", "pre-push" })
         {
             var path = Path.Combine(hooks, name);
-            if (File.Exists(path) && !File.ReadAllText(path).Contains("# GitChunk managed hook") && !File.ReadAllText(path).Contains("# ResourceSplitter managed hook")) throw new Exception("Existing hook must be integrated manually: " + path);
+            if (File.Exists(path) && !File.ReadAllText(path).Contains("# GitChunk managed hook") && !File.ReadAllText(path).Contains("# ResourceSplitter managed hook") && !StandardLfsHook(File.ReadAllText(path), name)) throw new Exception("Existing hook must be integrated manually: " + path);
         }
         var tool = Path.Combine(actual, ".gitchunk", InstalledToolName);
         if (Directory.Exists(Path.GetDirectoryName(tool)) && (File.GetAttributes(Path.GetDirectoryName(tool)!) & FileAttributes.ReparsePoint) != 0) throw new Exception("Tool directory cannot be a symbolic link/junction.");
@@ -421,6 +423,7 @@ static class GitIntegration
         foreach (var (name, command) in new[] { ("pre-commit", "git-prepare"), ("pre-push", "git-check-push") })
         {
             var hook = Path.Combine(hooks, name);
+            if (File.Exists(hook) && StandardLfsHook(File.ReadAllText(hook), name)) File.Copy(hook, Path.Combine(Path.GetDirectoryName(runtime)!, name + ".lfs-backup"), true);
             File.WriteAllText(hook, "#!/bin/sh\n# GitChunk managed hook\nexec " + Quote(runtime) + " " + command + "\n", new UTF8Encoding(false));
             if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(hook, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute | UnixFileMode.GroupRead | UnixFileMode.GroupExecute | UnixFileMode.OtherRead | UnixFileMode.OtherExecute);
         }

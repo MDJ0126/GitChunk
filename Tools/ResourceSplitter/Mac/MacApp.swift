@@ -19,7 +19,7 @@ import AppKit
         case "installed": return "✓ Installed · Automatic chunking and restoration are enabled for this repository on this computer."
         case "legacy": return "A legacy installation was found. Upgrade to Git Chunk to migrate its storage."
         case "incomplete": return "Some settings are missing. Reinstall to repair them."
-        case "not-installed": return "Not installed · Installation also restores pointer files from a fresh clone."
+        case "not-installed": return "Not installed · Install to convert current LFS files or restore a fresh clone. Commit or stash tracked changes first. Past LFS history and server storage are preserved."
         case "not-root": return "Select the root folder of your Git repository."
         case "not-repository": return "The selected folder is not a Git repository."
         default: return "Unable to check installation. Verify the folder path and Git installation."
