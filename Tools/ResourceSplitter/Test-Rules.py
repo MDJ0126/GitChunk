@@ -19,7 +19,7 @@ def large(path):
     with path.open('wb') as f: f.truncate(60 * 1024 * 1024); f.write(b'Git Chunk rules and history')
 
 with tempfile.TemporaryDirectory(prefix='GitChunk-rules-') as temp:
-    root = Path(temp) / 'writer'; root.mkdir()
+    root = Path(temp).resolve() / 'writer'; root.mkdir()
     run(root, 'git', 'init', '-b', 'main')
     run(root, 'git', 'config', 'user.name', 'Test'); run(root, 'git', 'config', 'user.email', 'test@example.invalid')
     asset = root / 'Assets' / '한글 picture.bmp'; large(asset); expected = sha(asset)
@@ -62,10 +62,10 @@ with tempfile.TemporaryDirectory(prefix='GitChunk-rules-') as temp:
         assert not (root / '.gitchunk' / 'GitChunk.exe').exists()
         run(root, 'git', 'checkout', current)
         assert sha(asset) == expected
-    remote = Path(temp) / 'remote.git'
+    remote = Path(temp).resolve() / 'remote.git'
     run(root, 'git', 'init', '--bare', str(remote)); run(root, 'git', 'remote', 'add', 'origin', str(remote))
     run(root, 'git', 'push', '-u', 'origin', 'main')
-    reader = Path(temp) / 'reader'
+    reader = Path(temp).resolve() / 'reader'
     run(root, 'git', 'clone', '--branch', 'main', str(remote), str(reader))
     run(reader, tool, 'git-install', str(reader))
     assert sha(reader / 'Assets' / '한글 picture.bmp') == expected

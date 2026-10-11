@@ -23,7 +23,7 @@ def digest(path):
 
 
 with tempfile.TemporaryDirectory(prefix="ResourceSplitter-native-") as temp:
-    root = Path(temp)
+    root = Path(temp).resolve()
     writer = root / "writer"
     writer.mkdir()
     run(writer, "git", "init", "-b", "main")
