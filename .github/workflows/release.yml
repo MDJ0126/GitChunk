@@ -1,0 +1,93 @@
+name: Publish Git Chunk
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (for example 1.0.0)'
+        required: true
+        default: '1.0.0'
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+      - name: Build and test
+        shell: pwsh
+        run: |
+          dotnet publish Tools/ResourceSplitter/ResourceSplitter.csproj -c Release -r win-x64 -o publish/windows
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          dotnet publish Tools/ResourceSplitter/ResourceSplitter.csproj -c Release -r win-x64 -p:Headless=true -o publish/cli
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python Tools/ResourceSplitter/Test-Rules.py publish/cli/GitChunk.exe
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Package installer and portable commands
+        shell: pwsh
+        env:
+          GITCHUNK_VERSION: ${{ inputs.version }}
+        run: |
+          if ($env:GITCHUNK_VERSION -notmatch '^\d+\.\d+\.\d+$') { throw 'Invalid version' }
+          New-Item dist, publish/package -ItemType Directory -Force | Out-Null
+          Copy-Item publish/windows/GitChunk.exe publish/package/GitChunk.exe
+          Copy-Item publish/cli/GitChunk.exe publish/package/git-chunk.exe
+          Compress-Archive publish/package/* dist/GitChunk-Windows-x64.zip
+          & 'C:/Program Files (x86)/Inno Setup 6/ISCC.exe' Packaging/GitChunk.iss
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-windows
+          path: dist/*
+  mac:
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - rid: osx-arm64
+            runner: macos-latest
+          - rid: osx-x64
+            runner: macos-15-intel
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+      - run: bash Tools/ResourceSplitter/Mac/Build.sh ${{ matrix.rid }}
+      - run: python3 Tools/ResourceSplitter/Test-Rules.py Tools/ResourceSplitter/bin/mac/${{ matrix.rid }}/GitChunk.app/Contents/MacOS/GitChunk-cli
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.rid }}
+          path: Tools/ResourceSplitter/bin/mac/${{ matrix.rid }}/GitChunk-${{ matrix.rid }}.zip
+  publish:
+    if: github.ref == 'refs/heads/main'
+    needs: [windows, mac]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          merge-multiple: true
+          path: dist
+      - name: Generate verified package manifests
+        env:
+          VERSION: ${{ inputs.version }}
+        run: python3 Packaging/Generate-Packages.py "$VERSION" dist packages
+      - name: Publish release and package branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          gh release create "v$VERSION" dist/* packages/SHA256SUMS --target "$GITHUB_SHA" --title "Git Chunk $VERSION" --generate-notes
+          git config user.name github-actions
+          git config user.email github-actions@users.noreply.github.com
+          cp -R packages/bucket packages/Casks .
+          git add bucket Casks
+          git commit -m "Git Chunk $VERSION package manifests"
+          git push origin HEAD:main

@@ -1,5 +1,8 @@
 Tools/ResourceSplitter/bin/
 Tools/ResourceSplitter/obj/
+/dist/
+/publish/
+/packages/
 
 # ResourceSplitter chunk cache (required chunks are staged by the hook)
 /.resourcesplitter/objects/

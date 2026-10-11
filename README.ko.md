@@ -1,5 +1,7 @@
 # Git Chunk
 
+빌드 없이 설치할 일반 사용자용 Windows 설치 프로그램 및 Scoop·Homebrew 배포 구성을 추가했습니다. [배포 방법](Packaging/README.md)을 참고하세요. 패키지 설치 명령은 첫 릴리스가 정상 배포된 뒤 사용할 수 있습니다.
+
 [English](README.md) · **한국어**
 
 앱 기본 언어는 영어입니다. 아래 설명의 설치 버튼은 **Install Git Chunk**, 규칙 저장은 **Save rules**, 프리셋 저장은 **Save preset**입니다.

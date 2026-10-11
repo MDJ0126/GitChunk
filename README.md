@@ -6,6 +6,8 @@ Store large files as chunks in ordinary Git. Install once per repository and com
 
 ## Windows app
 
+For ready-to-install distribution (no SDK), see [binary installers and package managers](Packaging/README.md). The new **Publish Git Chunk** workflow builds a Windows setup installer and Homebrew/Scoop package feeds. These download and package commands become available after the first successful release.
+
 Run **GitChunk.exe**, select the repository root, edit your chunk rules or load a preset, and click **Install Git Chunk**. The UI defaults to English and shows installation status. An installed repository offers **Update / Reinstall**.
 
 After first installation, or after changing the policy for existing tracked files:
