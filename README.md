@@ -4,6 +4,8 @@
 
 **Manage large assets without Git LFS.** Files over **50 MiB** are stored in chunks of up to **49 MiB**, while you work with full originals locally. No .NET SDK needed.
 
+![Git Chunk splits originals into Git chunks and restores them on checkout.](docs/assets/git-chunk-overview.png)
+
 ## Install
 
 **Windows:** [Download the installer](https://github.com/MDJ0126/GitChunk/releases/latest), or use Scoop:

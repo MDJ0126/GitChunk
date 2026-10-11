@@ -4,6 +4,8 @@
 
 **Git LFS 없이 대용량 리소스를 관리합니다.** **50 MiB 초과** 파일은 Git에 최대 **49 MiB** 조각으로 저장하고, 로컬에서는 원본으로 작업합니다. .NET SDK는 필요 없습니다.
 
+![원본 파일을 Git에 조각으로 저장하고 checkout 시 원본으로 복원합니다.](docs/assets/git-chunk-overview.png)
+
 ## 설치
 
 **Windows:** [설치 파일 다운로드](https://github.com/MDJ0126/GitChunk/releases/latest) 또는 Scoop을 사용하세요.
