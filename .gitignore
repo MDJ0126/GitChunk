@@ -3,3 +3,6 @@ Tools/ResourceSplitter/obj/
 
 # ResourceSplitter chunk cache (required chunks are staged by the hook)
 /.resourcesplitter/objects/
+
+# GitChunk chunk cache (required chunks are staged by the hook)
+/.gitchunk/objects/

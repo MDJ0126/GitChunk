@@ -1,23 +1,26 @@
-이 폴더는 ResourceSplitter용 합성 데이터 예제입니다. 실제 Unity/Unreal 프로젝트나 재생 가능한 에셋이 아닙니다.
-현재 상태: 원본 파일 상태. 1번/2번과 3번은 같은 포인터·조각 형식을 사용합니다.
+이 폴더는 Git Chunk의 합성 데이터 예제입니다. .bin은 실제 에셋이 아니며 LargeImage_60MiB.bmp는 테스트용 실제 이미지입니다.
 
-수동 분할·복원 시험 (C:/Projects/ResourceSplitter 폴더에서 실행):
-  ./ResourceSplitter.exe split ./TestProject | Out-Host
-  ./ResourceSplitter.exe join ./TestProject | Out-Host
+GitChunk.exe에서 부모 Git 저장소 최상위 폴더 C:/Projects/ResourceSplitter를 선택하고 설치하세요.
+TestProject는 하위 폴더이므로 설치 대상으로 지정하지 않습니다.
 
-GUI에서 C:/Projects/ResourceSplitter/TestProject 폴더를 선택하고 파일 분할 / 원본 복원 카드를 선택한 뒤 실행합니다.
-분할 후 60 MiB 파일은 작은 복원 정보로 바뀌며 실제 데이터는 49 MiB + 11 MiB 조각으로 저장됩니다.
-Git 루트의 .resourcesplitter/objects/에 조각이 저장됩니다. .meta는 그대로 유지됩니다.
-정확히 50 MiB인 파일, 50 MiB보다 1바이트 작은 파일, 작은 텍스트와 빈 파일은 분할하지 않습니다.
-Library 폴더는 분할 대상에서 제외됩니다.
-복원 후에는 실제 원본들이 돌아옵니다. 조각은 삭제하지 않고 유지합니다.
-expected-sha256.txt에는 생성 직후의 원본 해시가 있습니다.
+기본 규칙 *에서는 50 MiB 초과 파일만 분할합니다. 정확히 50 MiB인 파일과 그 이하, .meta는 그대로 저장합니다.
+예를 들어 프로젝트 안의 Assets만 대상으로 지정하려면 분할 규칙에 TestProject/Assets/** 를 입력하세요.
+프리셋을 불러온 뒤 규칙 저장을 눌러 현재 규칙으로 적용합니다. 프로젝트에서 Library 등을 제외하려면 !TestProject/Library/** 를 뒤에 입력하세요.
 
-예제 다시 생성 (분할된 상태에서는 먼저 복원):
-  ./Tools/ResourceSplitter/Create-TestProject.ps1
-이 명령은 알려진 예제 파일을 새 합성 데이터로 덮어씁니다.
+최초 설치 또는 정책 변경 후:
+  git add -u
+  git add --renormalize .
+  git add .gitattributes .gitignore .gitchunk
+  git commit -m "Configure Git Chunk"
 
-Git 자동화의 별도 통합 테스트:
+로컬에는 실제 원본이 유지됩니다. Git 내부에는 복원 정보와 .gitchunk/objects의 조각이 저장됩니다.
+새 PC에서는 clone 후 한 번 설치하면 원본으로 복원됩니다. 기존 ResourceSplitter 이력도 지원합니다.
+
+예제를 다시 생성하려면 ./Tools/ResourceSplitter/Create-TestProject.ps1 을 실행하세요.
+이 명령은 알려진 합성 예제 파일을 덮어쓰므로 필요한 변경은 먼저 보관하세요. expected-sha256.txt는 생성 직후의 해시입니다.
+
+별도 임시 저장소 통합 검증:
   ./Tools/ResourceSplitter/Test-Git.ps1
-위 테스트는 bin 아래의 독립된 로컬 Git 저장소를 생성하여 commit/push/pull을 검증합니다.
-이 TestProject에서 3번 설치를 실행하면 부모 ResourceSplitter 저장소의 하위 폴더이므로 설치가 거부됩니다.
+  python Tools/ResourceSplitter/Test-Rules.py GitChunk.exe
+
+이전 수동 복구 CLI는 호환 용도로만 남아 있으며 앱에는 수동 분할/복원 메뉴가 없습니다.

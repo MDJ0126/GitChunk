@@ -53,12 +53,12 @@ with tempfile.TemporaryDirectory(prefix="ResourceSplitter-native-") as temp:
     assert digest(moved) == original
     run(writer, tool, "git-install", str(writer))
     assert run(writer, tool, "git-status", str(writer)).strip() == "installed"
-    run(writer, "git", "config", "filter.resourcesplitter.required", "false")
+    run(writer, "git", "config", "filter.gitchunk.required", "false")
     assert run(writer, tool, "git-status", str(writer)).strip() == "incomplete"
-    run(writer, "git", "config", "filter.resourcesplitter.required", "true")
-    installed = writer / ".resourcesplitter" / (
-        "ResourceSplitter.exe" if os.name == "nt" else
-        "ResourceSplitter-osx-" + ("arm64" if os.uname().machine == "arm64" else "x64")
+    run(writer, "git", "config", "filter.gitchunk.required", "true")
+    installed = writer / ".gitchunk" / (
+        "GitChunk.exe" if os.name == "nt" else
+        "GitChunk-osx-" + ("arm64" if os.uname().machine == "arm64" else "x64")
     )
     assert installed.exists()
     if os.name != "nt":

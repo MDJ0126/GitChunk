@@ -7,3 +7,16 @@
 .resourcesplitter/** -filter -text -diff -merge
 ResourceSplitter.* -filter
 Tools/ResourceSplitter/** -filter
+
+# GitChunk automatic storage
+* filter=gitchunk -text
+*.meta -filter
+.gitattributes -filter
+.gitignore -filter
+.gitchunk/** -filter -text -diff -merge
+.gitchunk/rules.txt -filter text eol=lf diff
+.gitchunk/presets/** -filter text eol=lf diff
+.resourcesplitter/** -filter -text -diff -merge
+GitChunk.* -filter
+ResourceSplitter.* -filter
+Tools/ResourceSplitter/** -filter

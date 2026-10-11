@@ -1,5 +1,5 @@
 $ErrorActionPreference = 'Stop'
-$exe = (Resolve-Path (Join-Path $PSScriptRoot '../../ResourceSplitter.exe')).Path
+$exe = (Resolve-Path (Join-Path $PSScriptRoot '../../GitChunk.exe')).Path
 $fixture = Join-Path $PSScriptRoot ('bin/threshold-test-' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path (Join-Path $fixture 'Assets') -Force | Out-Null
 foreach ($entry in @(@('large.bin',52428801L), @('boundary.bin',52428800L), @('below.bin',52428799L), @('empty.bin',0L))) {

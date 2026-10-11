@@ -4,7 +4,6 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -13,220 +12,153 @@ using Microsoft.Win32;
 
 partial class MainWindow : Window
 {
-    bool busy;
-    string mode = "git-install";
-    string installation = "unknown";
-    int statusRevision;
+    bool busy, dirty, loading;
+    string installation = "unknown", loadedRoot = "";
+    int revision;
     public MainWindow()
     {
         InitializeComponent();
+        ApplyState();
         FolderPath.TextChanged += async (_, _) => await RefreshInstallation();
         Activated += async (_, _) => { if (!busy) await RefreshInstallation(); };
         FolderPath.Text = Directory.GetCurrentDirectory();
-        GitMode.IsChecked = true;
-        Append("프로젝트 폴더와 작업을 선택하세요.");
+        Append("Select a repository, save your rules, and install Git Chunk.");
     }
-    void Browse(object sender, RoutedEventArgs e)
+    string Root() => Path.TrimEndingDirectorySeparator(Path.GetFullPath(FolderPath.Text.Trim().Trim('"')));
+    bool ValidRepository => installation is "installed" or "incomplete" or "legacy" or "not-installed";
+    void ApplyState()
     {
-        var picker = new OpenFolderDialog { Title = "프로젝트 폴더 선택", Multiselect = false };
-        if (Directory.Exists(FolderPath.Text)) picker.InitialDirectory = FolderPath.Text;
-        if (picker.ShowDialog(this) == true) FolderPath.Text = picker.FolderName;
-    }
-    void ModeChanged(object sender, RoutedEventArgs e)
-    {
-        if (RunButton == null || ModeHint == null) return;
-        mode = (string)((RadioButton)sender).Tag;
-        (RunButton.Content, ModeHint.Text) = mode switch
-        {
-            "join" => ("복원 시작  →", "SHA-256 검증 후 원본을 복원합니다. 데이터 조각은 유지됩니다."),
-            "git-install" => ("자동화 설치  →", "Git 저장소의 루트 폴더를 선택하세요. 설치 후 초기 설정을 한 번 커밋해야 합니다."),
-            _ => ("분할 시작  →", "50 MiB 초과 파일만 분할합니다. 작업 전 에디터를 닫고, 에디터를 열기 전에 원본을 복원하세요.")
-        };
-        ApplyInstallation();
-    }
-    void ApplyInstallation()
-    {
-        if (mode != "git-install") return;
-        RunButton.Content = installation == "installed" ? "자동화 업데이트 / 재설치  →" : "자동화 설치  →";
+        RunButton.Content = installation == "installed" ? "Update / Reinstall  →" : installation == "legacy" ? "Upgrade to Git Chunk  →" : "Install Git Chunk  →";
+        RunButton.IsEnabled = !busy && ValidRepository;
+        Modes.IsEnabled = !busy && ValidRepository;
         ModeHint.Text = installation switch {
-            "installed" => "✓ 이 PC의 선택한 저장소에 Git 자동화가 설치되어 있습니다. 다시 실행하면 도구와 설정을 업데이트합니다.",
-            "incomplete" => "⚠ 자동화 설정이 일부 누락되었거나 다른 운영체제용입니다. 재설치하여 확인하세요.",
-            "not-installed" => "이 PC의 선택한 저장소에는 Git 자동화가 설치되지 않았습니다.",
-            "not-root" => "Git 저장소의 최상위 폴더를 선택해 주세요.",
-            "not-repository" => "선택한 폴더는 Git 저장소가 아닙니다.",
-            _ => "설치 상태를 확인할 수 없습니다. 폴더 경로와 Git 설치를 확인해 주세요."
+            "installed" => "✓ Installed · Automatic chunking and restoration are enabled for this repository on this computer.",
+            "legacy" => "A legacy installation was found. Upgrade to Git Chunk to migrate its storage.",
+            "incomplete" => "Some settings are missing. Reinstall to repair them.",
+            "not-installed" => "Not installed · Installation also restores pointer files from a fresh clone.",
+            "not-root" => "Select the root folder of your Git repository.",
+            "not-repository" => "The selected folder is not a Git repository.",
+            _ => "Unable to check installation. Verify the folder path and Git installation."
         };
+    }
+    async Task<string> Command(string command, string root, bool log = false)
+    {
+        var info = new ProcessStartInfo(Environment.ProcessPath!) { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true, StandardOutputEncoding = Encoding.UTF8, StandardErrorEncoding = Encoding.UTF8, WorkingDirectory = root };
+        info.ArgumentList.Add(command); info.ArgumentList.Add(root);
+        using var child = Process.Start(info) ?? throw new Exception("Could not start the executable.");
+        var output = child.StandardOutput.ReadToEndAsync(); var errors = child.StandardError.ReadToEndAsync();
+        await child.WaitForExitAsync(); var stdout = await output; var stderr = await errors;
+        if (log) { if (stdout.Length > 0) Append(stdout.Trim()); if (stderr.Length > 0) Append(stderr.Trim()); }
+        if (child.ExitCode != 0) throw new Exception(stderr.Trim());
+        return stdout.Trim();
     }
     async Task RefreshInstallation()
     {
-        var revision = ++statusRevision;
-        await Task.Delay(250);
-        if (revision != statusRevision || busy) return;
+        var current = ++revision; await Task.Delay(250);
+        if (current != revision || busy) return;
         try {
-            var path = Path.GetFullPath(FolderPath.Text.Trim().Trim('"'));
-            if (!Directory.Exists(path)) throw new Exception();
-            var info = new ProcessStartInfo(Environment.ProcessPath!) { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true, StandardOutputEncoding = Encoding.UTF8 };
-            info.ArgumentList.Add("git-status"); info.ArgumentList.Add(path);
-            using var child = Process.Start(info)!;
-            var output = child.StandardOutput.ReadToEndAsync(); var errors = child.StandardError.ReadToEndAsync();
-            await child.WaitForExitAsync(); await errors;
-            var state = (await output).Trim();
-            if (revision != statusRevision || busy) return;
-            installation = child.ExitCode == 0 ? state : "unknown";
-        } catch { if (revision != statusRevision) return; installation = "unknown"; }
-        ApplyInstallation();
+            var root = Root(); if (!Directory.Exists(root)) throw new Exception();
+            var state = await Command("git-status", root);
+            if (current != revision || busy) return;
+            installation = state;
+            if (ValidRepository && !root.Equals(loadedRoot, FileSystemPaths.Comparison)) {
+                if (dirty) Append("Unsaved rules were not written to the previous folder.");
+                LoadRules(root); loadedRoot = root;
+            }
+        } catch { if (current != revision) return; installation = "unknown"; }
+        ApplyState();
     }
-    void Append(string text)
+    void LoadRules(string root)
     {
-        Log.AppendText($"[{DateTime.Now:HH:mm:ss}] {text}{Environment.NewLine}");
-        Log.ScrollToEnd();
+        loading = true; try { RulesEditor.Text = ChunkRules.Load(root); dirty = false; UpdatePresets(root); } finally { loading = false; }
     }
-    async Task ReadLog(StreamReader reader)
+    void UpdatePresets(string root)
     {
-        string? line;
-        while ((line = await reader.ReadLineAsync()) != null)
-        {
-            var message = line;
-            await Dispatcher.InvokeAsync(() => Append(message));
-        }
+        var directory = ChunkRules.PathFor(root, "presets");
+        var names = Directory.Exists(directory) ? Directory.GetFiles(directory, "*.txt").Select(Path.GetFileNameWithoutExtension).ToList() : new List<string?>();
+        foreach (var name in new[] { "default", "unity", "unreal" }) if (!names.Contains(name)) names.Add(name);
+        PresetList.ItemsSource = names.OrderBy(x => x).ToList(); PresetList.SelectedItem = "default";
     }
-    async void Execute(object sender, RoutedEventArgs e)
-        => await RunSelected();
-    async Task RunSelected()
+    void RulesChanged(object sender, System.Windows.Controls.TextChangedEventArgs e) { if (!loading && StatusText != null) { dirty = true; StatusText.Text = "Rules changed · not saved yet"; } }
+    void StoreRules()
+    {
+        if (!ValidRepository || !Root().Equals(loadedRoot, FileSystemPaths.Comparison)) throw new Exception("Wait for repository validation before saving.");
+        ChunkRules.EnsureDefaults(Root()); ChunkRules.Save(Root(), RulesEditor.Text); dirty = false;
+        StatusText.Text = "Rules saved";
+        Append("Saved .gitchunk/rules.txt. Run git add --renormalize . to apply the policy to existing tracked files.");
+    }
+    void SaveRules(object sender, RoutedEventArgs e) { try { StoreRules(); } catch (Exception ex) { Append(ex.Message); } }
+    void LoadPreset(object sender, RoutedEventArgs e)
+    {
+        try {
+            if (PresetList.SelectedItem is not string name) return;
+            var path = ChunkRules.PathFor(Root(), ChunkRules.PresetPath(name));
+            RulesEditor.Text = File.Exists(path) ? ChunkRules.EnglishTemplate(File.ReadAllText(path)) : name switch { "unity" => ChunkRules.Unity, "unreal" => ChunkRules.Unreal, _ => ChunkRules.Default };
+            Append(name + " preset loaded into the editor. Click Save rules to apply it.");
+        } catch (Exception ex) { Append(ex.Message); }
+    }
+    void SavePreset(object sender, RoutedEventArgs e)
+    {
+        try { ChunkRules.Save(Root(), RulesEditor.Text, ChunkRules.PresetPath(PresetName.Text)); UpdatePresets(Root()); Append("Preset saved · " + PresetName.Text); }
+        catch (Exception ex) { Append(ex.Message); }
+    }
+    async void Browse(object sender, RoutedEventArgs e)
+    {
+        if (dirty && MessageBox.Show(this, "Discard unsaved rules and switch folders?", "Git Chunk", MessageBoxButton.YesNo) != MessageBoxResult.Yes) return;
+        var picker = new OpenFolderDialog { Title = "Select Git repository root", Multiselect = false };
+        if (Directory.Exists(FolderPath.Text)) picker.InitialDirectory = FolderPath.Text;
+        if (picker.ShowDialog(this) == true) { FolderPath.Text = picker.FolderName; await RefreshInstallation(); }
+    }
+    async void Execute(object sender, RoutedEventArgs e) => await Install();
+    async Task Install()
     {
         if (busy) return;
-        string path;
-        try
-        {
-            path = Path.GetFullPath(FolderPath.Text.Trim().Trim('"'));
-            if (!Directory.Exists(path)) throw new Exception("존재하는 프로젝트 폴더를 선택해 주세요.");
-        }
-        catch (Exception ex) { StatusText.Text = "폴더 확인 필요"; Append(ex.Message); return; }
-        busy = true;
-        RunButton.IsEnabled = BrowseButton.IsEnabled = Modes.IsEnabled = FolderPath.IsEnabled = false;
-        Progress.Visibility = Visibility.Visible; Progress.IsIndeterminate = true;
-        StatusText.Text = "처리 중…";
-        var title = mode == "split" ? "파일 분할" : mode == "join" ? "원본 복원" : "Git 자동화 설치";
-        Append($"{title} 시작 · {path}");
-        var timer = Stopwatch.StartNew();
-        try
-        {
-            var info = new ProcessStartInfo(Environment.ProcessPath ?? throw new Exception("EXE 경로를 확인할 수 없습니다."))
-            {
-                UseShellExecute = false, CreateNoWindow = true, WorkingDirectory = path,
-                RedirectStandardOutput = true, RedirectStandardError = true,
-                StandardOutputEncoding = Encoding.UTF8, StandardErrorEncoding = Encoding.UTF8
-            };
-            info.ArgumentList.Add(mode); info.ArgumentList.Add(path);
-            using var process = Process.Start(info) ?? throw new Exception("작업을 시작할 수 없습니다.");
-            var stdout = ReadLog(process.StandardOutput); var stderr = ReadLog(process.StandardError);
-            await process.WaitForExitAsync(); await Task.WhenAll(stdout, stderr);
-            if (process.ExitCode != 0)
-            {
-                StatusText.Text = "작업 실패 · 기록을 확인해 주세요";
-                Append("작업이 오류로 중단되었습니다. 위 오류를 확인한 뒤 다시 시도해 주세요.");
-            }
-            else
-            {
-                StatusText.Text = $"{title} 완료";
-                Append($"완료 · {timer.Elapsed.TotalSeconds:F1}초");
-                if (mode == "git-install")
-                    Append("최초 설치 후 저장소에서 실행할 명령:\ngit add --renormalize .\ngit add .gitattributes .gitignore .resourcesplitter/ResourceSplitter.exe\ngit commit -m \"Enable automatic resource splitting\"");
-            }
-        }
-        catch (Exception ex) { StatusText.Text = "작업 실패"; Append(ex.Message); }
-        finally
-        {
-            busy = false;
-            RunButton.IsEnabled = BrowseButton.IsEnabled = Modes.IsEnabled = FolderPath.IsEnabled = true;
-            Progress.IsIndeterminate = false; Progress.Visibility = Visibility.Collapsed;
-            await RefreshInstallation();
-        }
+        try {
+            await RefreshInstallation(); if (!ValidRepository) throw new Exception("Select the root folder of your Git repository.");
+            StoreRules(); busy = true; ApplyState(); FolderPath.IsEnabled = BrowseButton.IsEnabled = false;
+            Progress.Visibility = Visibility.Visible; Progress.IsIndeterminate = true; StatusText.Text = "Installing…";
+            await Command("git-install", Root(), true);
+            StatusText.Text = "Git Chunk installed";
+            Append("After first installation or changing rules:\ngit add -u\ngit add --renormalize .\ngit add .gitattributes .gitignore .gitchunk\ngit commit -m \"Configure Git Chunk\"\nThen commit, push and pull as usual.");
+        } catch (Exception ex) { StatusText.Text = "Operation failed"; Append(ex.Message); }
+        finally { busy = false; FolderPath.IsEnabled = BrowseButton.IsEnabled = true; Progress.IsIndeterminate = false; Progress.Visibility = Visibility.Collapsed; await RefreshInstallation(); }
     }
-    void CopyLog(object sender, RoutedEventArgs e)
-    {
-        try { Clipboard.SetText(Log.Text); }
-        catch (Exception ex) { Append("로그 복사 실패: " + ex.Message); }
-    }
-    void OnDragOver(object sender, DragEventArgs e)
-    {
-        e.Effects = !busy && e.Data.GetDataPresent(DataFormats.FileDrop) ? DragDropEffects.Copy : DragDropEffects.None;
-        e.Handled = true;
-    }
-    void OnDrop(object sender, DragEventArgs e)
-    {
-        if (busy || e.Data.GetData(DataFormats.FileDrop) is not string[] paths || paths.Length != 1) return;
-        if (Directory.Exists(paths[0])) FolderPath.Text = paths[0];
-        else Append("파일 대신 프로젝트 폴더를 끌어다 놓아 주세요.");
-        e.Handled = true;
-    }
-    void OnClosing(object? sender, CancelEventArgs e)
-    {
-        if (!busy) return;
-        e.Cancel = true;
-        StatusText.Text = "처리가 완료되면 창을 닫을 수 있습니다";
-    }
-    // Render the real WPF controls for visual QA without leaving a visible window.
+    void Append(string text) { Log.AppendText($"[{DateTime.Now:HH:mm:ss}] {text}{Environment.NewLine}"); Log.ScrollToEnd(); }
+    void CopyLog(object sender, RoutedEventArgs e) { try { Clipboard.SetText(Log.Text); } catch (Exception ex) { Append(ex.Message); } }
+    void OnDragOver(object sender, DragEventArgs e) { e.Effects = !busy && e.Data.GetDataPresent(DataFormats.FileDrop) ? DragDropEffects.Copy : DragDropEffects.None; e.Handled = true; }
+    void OnDrop(object sender, DragEventArgs e) { if (!busy && e.Data.GetData(DataFormats.FileDrop) is string[] paths && paths.Length == 1 && Directory.Exists(paths[0])) FolderPath.Text = paths[0]; e.Handled = true; }
+    void OnClosing(object? sender, CancelEventArgs e) { if (busy) { e.Cancel = true; StatusText.Text = "Wait for installation to finish before closing."; } else if (dirty && MessageBox.Show(this, "Discard unsaved rules and close?", "Git Chunk", MessageBoxButton.YesNo) != MessageBoxResult.Yes) e.Cancel = true; }
     internal static int Preview(string path)
     {
         RenderOptions.ProcessRenderMode = RenderMode.SoftwareOnly;
-        var app = new Application();
-        var window = new MainWindow { WindowStartupLocation = WindowStartupLocation.Manual, Left = -10000, Top = -10000, ShowInTaskbar = false, ShowActivated = false };
-        window.Loaded += async (_, _) => { await window.RefreshInstallation(); await window.Dispatcher.InvokeAsync(() =>
-        {
-            var content = (FrameworkElement)window.Content;
-            content.UpdateLayout();
-            var bitmap = new RenderTargetBitmap((int)content.ActualWidth, (int)content.ActualHeight, 96, 96, PixelFormats.Pbgra32);
-            bitmap.Render(content);
-            var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap));
-            using (var output = File.Create(Path.GetFullPath(path))) encoder.Save(output);
-            window.Close();
-        }, DispatcherPriority.ApplicationIdle); };
-        return app.Run(window);
+        var app = new Application(); var window = new MainWindow { Left = -10000, Top = -10000, WindowStartupLocation = WindowStartupLocation.Manual, ShowInTaskbar = false, ShowActivated = false };
+        window.Loaded += async (_, _) => { await window.RefreshInstallation(); await window.Dispatcher.InvokeAsync(() => {
+            var content = (FrameworkElement)window.Content; content.UpdateLayout();
+            var bitmap = new RenderTargetBitmap((int)content.ActualWidth, (int)content.ActualHeight, 96, 96, PixelFormats.Pbgra32); bitmap.Render(content);
+            var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap)); using (var output = File.Create(Path.GetFullPath(path))) encoder.Save(output);
+            window.dirty = false; window.Close();
+        }, DispatcherPriority.ApplicationIdle); }; return app.Run(window);
     }
-    internal static int Smoke(string folder)
+    internal static int Smoke(string root)
     {
-        var app = new Application();
-        var window = new MainWindow { WindowStartupLocation = WindowStartupLocation.Manual, Left = -10000, Top = -10000, ShowInTaskbar = false, ShowActivated = false };
-        window.Loaded += async (_, _) =>
-        {
-            try
-            {
-                var file = Path.Combine(folder, "large.bin");
-                static string FileHash(string path) { using var stream = File.OpenRead(path); return Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(stream)); }
-                var original = FileHash(file);
-                if (window.GitMode.IsChecked != true || window.mode != "git-install") throw new Exception("Recommended default is not selected.");
-                window.SplitMode.IsChecked = true;
-                window.FolderPath.Text = folder;
-                await window.RunSelected();
-                if (!window.StatusText.Text.EndsWith("완료") || new FileInfo(file).Length > 1024 || !window.RunButton.IsEnabled) throw new Exception("GUI split failed.");
-                window.JoinMode.IsChecked = true;
-                await window.RunSelected();
-                if (!window.StatusText.Text.EndsWith("완료") || FileHash(file) != original || window.busy) throw new Exception("GUI restore failed.");
-                window.GitMode.IsChecked = true;
-                if ((string)window.RunButton.Content != "자동화 설치  →") throw new Exception("GUI mode selection failed.");
-                window.FolderPath.Text = Path.Combine(folder, "missing-folder");
-                await window.RunSelected();
-                if (window.StatusText.Text != "폴더 확인 필요") throw new Exception("GUI validation failed.");
-                Console.WriteLine("PASS: real GUI split/restore workers, hash, mode switching, folder validation, control state.");
-                app.Shutdown(0);
-            }
-            catch (Exception ex) { Console.Error.WriteLine(ex.Message + "\n" + window.Log.Text); app.Shutdown(1); }
-        };
-        return app.Run(window);
+        var app = new Application(); var window = new MainWindow { Left = -10000, Top = -10000, WindowStartupLocation = WindowStartupLocation.Manual, ShowInTaskbar = false, ShowActivated = false };
+        window.Loaded += async (_, _) => { try {
+            window.FolderPath.Text = root; await window.RefreshInstallation();
+            if (window.installation != "not-installed") throw new Exception("Expected fresh repository.");
+            window.RulesEditor.Text = "Assets/**\n!Assets/Small/**\n"; window.StoreRules();
+            window.PresetName.Text = "custom-test"; window.SavePreset(window, new RoutedEventArgs());
+            if (!File.Exists(ChunkRules.PathFor(root, "presets/custom-test.txt"))) throw new Exception("Preset save failed.");
+            await window.Install(); if (window.installation != "installed") throw new Exception("Install state failed: " + window.Log.Text);
+            var reopened = new MainWindow(); reopened.FolderPath.Text = root; await reopened.RefreshInstallation();
+            if (reopened.installation != "installed" || reopened.RulesEditor.Text != window.RulesEditor.Text) throw new Exception("Reopen persistence failed.");
+            Console.WriteLine("PASS: GUI install, rules, custom preset, reopen status and persistence."); window.dirty = false; reopened.dirty = false; app.Shutdown(0);
+        } catch (Exception ex) { window.dirty = false; Console.Error.WriteLine(ex); app.Shutdown(1); } }; return app.Run(window);
     }
 }
-
 static class ConsoleHost
 {
     [DllImport("kernel32.dll")] static extern bool AttachConsole(uint processId);
     [DllImport("kernel32.dll")] static extern IntPtr GetStdHandle(int handle);
     [DllImport("kernel32.dll")] static extern uint GetFileType(IntPtr handle);
-    internal static void AttachIfNeeded()
-    {
-        // Git filters and GUI workers inherit binary pipes. Never replace them.
-        var type = GetFileType(GetStdHandle(-11));
-        if (type != 3 && type != 1) AttachConsole(uint.MaxValue);
-        Console.OutputEncoding = new UTF8Encoding(false);
-    }
+    internal static void AttachIfNeeded() { var type = GetFileType(GetStdHandle(-11)); if (type != 3 && type != 1) AttachConsole(uint.MaxValue); Console.OutputEncoding = new UTF8Encoding(false); Console.InputEncoding = new UTF8Encoding(false); }
 }

@@ -1,5 +1,5 @@
 $ErrorActionPreference = 'Stop'
-$exe = (Resolve-Path (Join-Path $PSScriptRoot '../../ResourceSplitter.exe')).Path
+$exe = (Resolve-Path (Join-Path $PSScriptRoot '../../GitChunk.exe')).Path
 $fixture = Join-Path $PSScriptRoot ('bin/git-test-' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $fixture | Out-Null
 function G { & git @args; if ($LASTEXITCODE -ne 0) { throw "git failed: $args" } }
@@ -38,7 +38,7 @@ try {
     $pointer = G show 'HEAD:Assets/한글 asset.bin'
     if (($pointer -join "`n") -notlike 'resourcesplitter-pointer-v1*') { throw 'Raw original was committed' }
     if ((G cat-file -s 'HEAD:Assets/boundary.bin') -ne '52428800') { throw 'Threshold boundary was split' }
-    $parts = @(G ls-tree -r --name-only HEAD | Where-Object { $_ -like '.resourcesplitter/objects/*' })
+    $parts = @(G ls-tree -r --name-only HEAD | Where-Object { $_ -like '.gitchunk/objects/*' })
     if ($parts.Count -ne 2) { throw 'Required chunks not committed' }
     G remote add origin ../remote.git
     G push -u origin main
@@ -106,16 +106,16 @@ try {
     Set-Content $asset 'now small'
     G add 'Assets/한글 asset.bin'
     G commit -m shrink
-    $remaining = @(G ls-tree -r --name-only HEAD | Where-Object { $_ -like '.resourcesplitter/objects/*' })
+    $remaining = @(G ls-tree -r --name-only HEAD | Where-Object { $_ -like '.gitchunk/objects/*' })
     if ($remaining.Count -ne 0) { throw 'Obsolete chunks remain in the current tree' }
     G push
     # Commit and push guards catch a raw blob even if filtering was bypassed.
     $s = [IO.File]::Create($asset)
-    try { $s.SetLength(52428801) } finally { $s.Dispose() }
-    G -c filter.resourcesplitter.clean=cat add 'Assets/한글 asset.bin'
+    try { $s.SetLength(104857600) } finally { $s.Dispose() }
+    G -c filter.gitchunk.clean=cat add 'Assets/한글 asset.bin'
     & git commit -m 'should fail'
     if ($LASTEXITCODE -eq 0) { throw 'Raw staged blob was accepted' }
-    G -c filter.resourcesplitter.clean=cat commit --no-verify -m 'bypass commit guard'
+    G -c filter.gitchunk.clean=cat commit --no-verify -m 'bypass commit guard'
     & git push
     if ($LASTEXITCODE -eq 0) { throw 'Raw blob bypassed push guard' }
     Write-Host 'PASS: hook collision, boundary, staged snapshot, push/clone, pull, checkout, GC, local edit protection, rebase, stash+GC, malformed pointer, shrink, commit/push guards'

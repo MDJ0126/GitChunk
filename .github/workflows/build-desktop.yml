@@ -1,4 +1,4 @@
-name: Build Windows and Mac
+name: Build Git Chunk
 on:
   workflow_dispatch:
 permissions:
@@ -16,16 +16,18 @@ jobs:
       - name: Test Windows data and Git
         shell: pwsh
         run: |
-          Copy-Item publish/windows/ResourceSplitter.exe ResourceSplitter.exe -Force
+          Copy-Item publish/windows/GitChunk.exe GitChunk.exe -Force
           ./Tools/ResourceSplitter/Test-Unified.ps1
           ./Tools/ResourceSplitter/Test-Git.ps1
+          python Tools/ResourceSplitter/Test-Rules.py GitChunk.exe
       - uses: actions/upload-artifact@v4
         with:
-          name: ResourceSplitter-Windows
-          path: publish/windows/ResourceSplitter.exe
+          name: GitChunk-Windows
+          path: publish/windows/GitChunk.exe
   mac:
     runs-on: ${{ matrix.runner }}
     strategy:
+      fail-fast: false
       matrix:
         include:
           - rid: osx-arm64
@@ -41,8 +43,9 @@ jobs:
         run: bash Tools/ResourceSplitter/Mac/Build.sh ${{ matrix.rid }}
       - name: Test native Mac core
         run: |
-          python3 Tools/ResourceSplitter/Mac/Test.py "Tools/ResourceSplitter/bin/mac/${{ matrix.rid }}/ResourceSplitter.app/Contents/MacOS/ResourceSplitter-cli"
+          python3 Tools/ResourceSplitter/Mac/Test.py "Tools/ResourceSplitter/bin/mac/${{ matrix.rid }}/GitChunk.app/Contents/MacOS/GitChunk-cli"
+          python3 Tools/ResourceSplitter/Test-Rules.py "Tools/ResourceSplitter/bin/mac/${{ matrix.rid }}/GitChunk.app/Contents/MacOS/GitChunk-cli"
       - uses: actions/upload-artifact@v4
         with:
-          name: ResourceSplitter-Mac-${{ matrix.rid }}
-          path: Tools/ResourceSplitter/bin/mac/${{ matrix.rid }}/ResourceSplitter-${{ matrix.rid }}.zip
+          name: GitChunk-Mac-${{ matrix.rid }}
+          path: Tools/ResourceSplitter/bin/mac/${{ matrix.rid }}/GitChunk-${{ matrix.rid }}.zip

@@ -36,9 +36,10 @@ class Program
     static bool Reserved(string relative)
     {
         var segments = relative.Replace('\\', '/').Split('/');
-        return segments.Any(s => new[] { ".git", ".svn", ".hg", ".resourcesplitter" }.Contains(s.ToLowerInvariant())) ||
+        return segments.Any(s => new[] { ".git", ".svn", ".hg", ".resourcesplitter", ".gitchunk" }.Contains(s.ToLowerInvariant())) ||
             segments.Any(s => s.Equals("ResourceParts", StringComparison.OrdinalIgnoreCase) || s.StartsWith("ResourceParts.staging-", StringComparison.OrdinalIgnoreCase) || s.StartsWith("ResourceParts.previous-", StringComparison.OrdinalIgnoreCase)) ||
             segments[^1].StartsWith("ResourceSplitter.", StringComparison.OrdinalIgnoreCase) ||
+            segments[^1].StartsWith("GitChunk.", StringComparison.OrdinalIgnoreCase) ||
             relative.Replace('\\', '/').StartsWith("Tools/ResourceSplitter/", StringComparison.OrdinalIgnoreCase);
     }
     static Settings LoadSettings(string root)
@@ -263,36 +264,27 @@ class Program
         ConsoleHost.AttachIfNeeded();
 #else
         Console.OutputEncoding = new System.Text.UTF8Encoding(false);
+        Console.InputEncoding = new System.Text.UTF8Encoding(false);
 #endif
         return RunCommand(args);
     }
     internal static int RunCommand(string[] args)
     {
-        bool interactive = args.Length == 0;
+        if (args.Length == 0 || args[0] is "-h" or "--help") {
+            Console.WriteLine("Git Chunk\ngit chunk install [repository-root]\ngit chunk status [repository-root]\ngit chunk rules [repository-root]\nConfiguration: .gitchunk/rules.txt");
+            return 0;
+        }
+        if (args[0] is "install" or "status" or "rules") {
+            args[0] = args[0] switch { "install" => "git-install", "status" => "git-status", _ => "git-rules-read" };
+            if (args.Length == 1) args = new[] { args[0], Directory.GetCurrentDirectory() };
+        }
         try
         {
             if (args.Length > 0 && args[0].StartsWith("git-", StringComparison.Ordinal)) return GitIntegration.Run(args);
             var root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(args.Length > 1 ? args[1] : Directory.GetCurrentDirectory()));
-            string? mode;
-            if (interactive)
-            {
-                Console.WriteLine("Resource Splitter / 범용 프로젝트 파일 분할 도구");
-                Console.WriteLine($"현재 작업 폴더: {root}");
-                Console.WriteLine("Enter를 누르면 위 폴더를 대상으로 실행합니다.");
-                Console.WriteLine("터미널에서는 명령을 실행한 폴더가 기준입니다.");
-                Console.WriteLine("다른 폴더를 사용하려면 프로젝트 경로를 입력하세요:");
-                var selectedRoot = Console.ReadLine()?.Trim().Trim('"');
-                if (!string.IsNullOrEmpty(selectedRoot)) root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(selectedRoot));
-                Console.WriteLine($"대상: {root}\n1. 분할: 원래 경로에 작은 복원 정보, .resourcesplitter에 조각 저장\n2. 복원: 복원 정보를 실제 원본으로 되돌림 (조각 유지)\n3. Git 자동 분할·복원 설치 (Git 저장소 루트 선택 필요)\n0. 종료\n50 MiB 초과 파일만 분할 / .meta 유지 / 분할 상태에서는 에디터 실행 금지 / 편집기를 닫고 실행해 주세요.");
-                mode = Console.ReadLine();
-                if (mode == "0") return 0;
-            }
-            else
-            {
-                mode = args[0];
-                Console.WriteLine($"대상: {root}");
-                if (args.Length < 2) Console.WriteLine("경로를 지정하지 않아 현재 작업 폴더를 사용합니다.");
-            }
+            var mode = args[0];
+            Console.WriteLine($"Target: {root}");
+            if (args.Length < 2) Console.WriteLine("Using the current working directory.");
             if (!Directory.Exists(root)) throw new Exception("Project folder does not exist: " + root);
             if (mode == "3") return GitIntegration.Run(new[] { "git-install", root });
             long chunk = args.Length > 2 ? long.Parse(args[2]) : 49L * 1024 * 1024;
@@ -308,10 +300,9 @@ class Program
                 GitIntegration.ManualJoin(root);
             }
             else if (mode == "legacy-split") Split(root, chunk);
-            else throw new Exception("Choose 1/split or 2/join.");
+            else throw new Exception("For setup, use git chunk install. Legacy recovery commands: split / join.");
             return 0;
         }
         catch (Exception e) { Console.Error.WriteLine("ERROR: " + e.Message); return 1; }
-        finally { if (interactive) { Console.WriteLine("Enter 키를 누르면 종료합니다."); Console.ReadLine(); } }
     }
 }

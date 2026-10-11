@@ -1,5 +1,5 @@
 $ErrorActionPreference = 'Stop'
-$exe = (Resolve-Path (Join-Path $PSScriptRoot '../../ResourceSplitter.exe')).Path
+$exe = (Resolve-Path (Join-Path $PSScriptRoot '../../GitChunk.exe')).Path
 $fixture = Join-Path $PSScriptRoot ('bin/unified-test-' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path (Join-Path $fixture 'Assets') -Force | Out-Null
 function E { & $exe @args | Out-Host; if ($LASTEXITCODE -ne 0) { throw "Tool failed: $args" } }
@@ -20,7 +20,7 @@ try {
     $pointer = [IO.File]::ReadAllBytes($asset)
     if ($pointer.Length -gt 1024 -or (Get-FileHash Assets/large.bin.meta).Hash -ne $meta) { throw 'Unexpected manual split representation' }
     $p = (Get-Content $asset -Raw).Substring("resourcesplitter-pointer-v1`n".Length) | ConvertFrom-Json
-    $chunkPath = Join-Path $fixture ('.resourcesplitter/objects/' + $p.Chunks[0].Oid)
+    $chunkPath = Join-Path $fixture ('.gitchunk/objects/' + $p.Chunks[0].Oid)
     $chunkBytes = [IO.File]::ReadAllBytes($chunkPath)
     [IO.File]::WriteAllText($chunkPath,'corrupt')
     & $exe join $fixture | Out-Host

@@ -2,6 +2,7 @@
   <PropertyGroup>
     <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-x64</RuntimeIdentifier>
     <WindowsBuild>$([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('win-'))</WindowsBuild>
+    <WindowsBuild Condition="'$(Headless)' == 'true'">False</WindowsBuild>
     <OutputType Condition="'$(WindowsBuild)' == 'True'">WinExe</OutputType>
     <OutputType Condition="'$(WindowsBuild)' != 'True'">Exe</OutputType>
     <TargetFramework Condition="'$(WindowsBuild)' == 'True'">net9.0-windows</TargetFramework>
@@ -10,7 +11,9 @@
     <ApplicationIcon Condition="'$(WindowsBuild)' == 'True'">Assets/AppIcon.ico</ApplicationIcon>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <AssemblyName>ResourceSplitter</AssemblyName>
+    <AssemblyName>GitChunk</AssemblyName>
+    <Product>Git Chunk</Product>
+    <Description>Git-native chunk storage for large files</Description>
     <SelfContained>true</SelfContained>
     <PublishSingleFile>true</PublishSingleFile>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
@@ -23,6 +26,7 @@
   </ItemGroup>
   <ItemGroup Condition="'$(WindowsBuild)' != 'True'">
     <Compile Remove="MainWindow.xaml.cs"/>
+    <Page Remove="MainWindow.xaml"/>
     <None Remove="MainWindow.xaml"/>
   </ItemGroup>
 </Project>

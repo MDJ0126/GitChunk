@@ -1,66 +1,143 @@
-# ResourceSplitter
+# Git Chunk
 
-50 MiB 초과 파일을 작은 복원 정보와 49 MiB 이하 조각으로 나누는 Windows x64 도구입니다. Git LFS나 별도 서버 없이 일반 Git에 저장합니다. 전체 용량을 줄이지는 않습니다.
+**English** · [한국어](README.ko.md)
 
-## 세 메뉴는 같은 저장 형식을 사용합니다
+Store large files as chunks in ordinary Git. Install once per repository and computer, then use `git add`, commit, push and pull as usual. Local files remain full originals. No Git LFS server or separate storage account is required. Chunking does **not** reduce total data size.
 
-- **1번 분할:** 원래 경로의 대용량 파일을 작은 복원 정보로 바꾸고 실제 데이터를 `.resourcesplitter/objects/`에 저장합니다. 직접 분할된 모습을 볼 수 있습니다.
-- **2번 복원:** 복원 정보를 실제 원본으로 되돌립니다. 검증된 조각은 유지합니다. 기존 `.part`/manifest 형식도 복원합니다.
-- **3번 Git 자동화 설치:** `git add`할 때 같은 형식으로 변환하고, 받을 때 원본으로 복원합니다. 자동화에서는 로컬 원본이 유지됩니다.
+## Windows app
 
-50 MiB 이하 파일과 `.meta`는 유지합니다. 수동 분할 상태에서는 에디터를 열지 말고 먼저 복원하세요. `.resourcesplitter/objects/`는 실제 데이터이므로 삭제하지 마세요.
+Run **GitChunk.exe**, select the repository root, edit your chunk rules or load a preset, and click **Install Git Chunk**. The UI defaults to English and shows installation status. An installed repository offers **Update / Reinstall**.
 
-Windows GUI EXE이므로 PowerShell에서 출력 확인과 작업 종료 대기가 필요한 명령에는 `| Out-Host`를 붙입니다. Git 훅과 GUI의 작업 실행은 종료까지 자동으로 기다립니다.
-
-## 수동으로 확인하기
-
-EXE를 더블클릭하면 Windows GUI가 열립니다. 폴더 선택 또는 폴더 드래그 후 **파일 분할 / 원본 복원 / Git 자동화** 카드를 선택하고 실행 버튼을 누르세요. 처리 중에는 진행 표시와 작업 기록을 확인할 수 있고, 로그 복사도 가능합니다.
-
-처음 실행하면 **Git 자동화(권장)**가 미리 선택됩니다. 실행 버튼을 눌러야 설치됩니다.
-
-Git 자동화 화면은 선택한 폴더의 이 PC 설치 상태를 확인합니다. 정상 설치되면 설치됨 안내와 **자동화 업데이트 / 재설치** 버튼이 표시됩니다. 폴더 변경, 창 재활성화 및 작업 완료 후 다시 확인하며, 일부 설정이 누락되면 재설치 안내를 표시합니다. 다른 PC에서는 별도 설치가 필요합니다.
-
-```powershell
-./ResourceSplitter.exe split ./TestProject | Out-Host
-./ResourceSplitter.exe join ./TestProject | Out-Host
-```
-
-Git 저장소 안에서는 조각이 저장소 루트의 `.resourcesplitter/objects/`에 저장됩니다. Git 저장소가 아닌 폴더에서는 선택한 대상 폴더 안에 저장됩니다. 원래 경로의 복원 정보와 조각을 함께 보관하세요.
-
-## Git 자동화 설치
-
-GUI에서 Git 저장소 루트 폴더와 **Git 자동화** 카드를 선택하고 **자동화 설치**를 누르세요. 저장소/PC마다 한 번 설치합니다.
-
-```powershell
-./ResourceSplitter.exe git-install C:/path/to/project | Out-Host
-# 최초 설정과 기존 추적 파일 반영
- git add --renormalize .
- git add .gitattributes .gitignore .resourcesplitter/ResourceSplitter.exe
- git commit -m "Enable automatic resource splitting"
- git push
-```
-
-이후 평소처럼 수정, git add, 커밋, 푸시, 풀하시면 됩니다. 새 PC에서 clone한 뒤에는 아래 명령을 한 번 실행합니다. 최초 복제된 복원 정보도 원본으로 돌아옵니다.
-
-```powershell
-./.resourcesplitter/ResourceSplitter.exe git-install | Out-Host
-```
-
-설치된 EXE를 업데이트하려면 새 EXE의 GUI에서 **Git 자동화**를 다시 설치하세요. 기존 다른 훅은 덮어쓰지 않고 설치를 중단합니다. 기존 이력의 대용량 원본/LFS 데이터 정리는 별도 작업입니다.
-
-자세한 검증 및 제한은 [사용 지시사항](INSTRUCTIONS.md)을 참고하세요.
-
-## Mac 버전 빌드
-
-Windows와 Mac은 같은 C# 분할·복원·Git 코드를 사용합니다. Mac 화면은 `Tools/ResourceSplitter/Mac/MacApp.swift`의 SwiftUI로 구성하며 Git 자동화가 기본 선택입니다.
-
-macOS 13 이상, Xcode Command Line Tools와 .NET 9 SDK가 있는 Mac에서 다음 명령으로 앱을 빌드합니다.
+After first installation, or after changing the policy for existing tracked files:
 
 ```bash
-bash Tools/ResourceSplitter/Mac/Build.sh osx-arm64 # Apple Silicon
-bash Tools/ResourceSplitter/Mac/Build.sh osx-x64   # Intel
+git add -u
+git add --renormalize .
+git add .gitattributes .gitignore .gitchunk
+git commit -m "Configure Git Chunk"
+git push
 ```
 
-결과는 `Tools/ResourceSplitter/bin/mac/<RID>/`의 `.app`과 ZIP입니다. 설치된 Git 도구는 `.resourcesplitter/ResourceSplitter-osx-arm64` 또는 `ResourceSplitter-osx-x64`입니다. 저장소를 다른 운영체제에서 사용할 때는 그 운영체제용 앱으로 자동화를 한 번 설치하세요.
+On a new computer, clone the repository and install once. Installation restores unchanged pointer files from the clone. The app has no manual split/restore menus.
 
-`.github/workflows/build-desktop.yml`은 Windows, Apple Silicon, Intel 빌드와 Git 왕복 검증을 구성합니다. 현재 Windows에서 두 Mac 공통 실행 파일의 교차 빌드까지 확인했습니다. **Mac GUI 컴파일·실행과 CI 실제 실행은 미확인**입니다. Mac 패키지는 로컬 서명이며 Developer ID 서명·공증은 포함하지 않습니다.
+## Command-line installation
+
+You can install without manually downloading an EXE or opening the GUI. The source installer fetches this repository, builds a self-contained CLI, installs it, and configures your selected repository. **Git and a .NET SDK capable of building .NET 9 are required.** A binary still runs internally; this is not a built-in Git command or a package-manager release.
+
+### Windows / PowerShell
+
+Download the script and run it against your project:
+
+```powershell
+Invoke-WebRequest https://raw.githubusercontent.com/MDJ0126/GitChunk/main/Install.ps1 -OutFile Install.ps1
+powershell -ExecutionPolicy Bypass -File ./Install.ps1 -Repository C:/path/to/project
+```
+
+It installs `git-chunk.exe` under `%LOCALAPPDATA%/GitChunk/bin` and adds that directory to your user PATH. Open a new terminal:
+
+```bash
+git chunk install
+git chunk status
+git chunk rules
+```
+
+Each command also accepts a repository-root argument. `install` configures the current repository; `status` reports `installed`, `legacy`, `incomplete` or a validation state; `rules` prints the active policy.
+
+For a local checkout, without downloading source again:
+
+```powershell
+./Install.ps1 -Repository C:/path/to/project -SourcePath C:/path/to/GitChunk
+```
+
+`-InstallDirectory` overrides the CLI directory. `-NoPathChanges` skips PATH changes, useful for isolated testing. The installer keeps its temporary source/build directory for diagnostics.
+
+### macOS / Terminal
+
+```bash
+curl -fL https://raw.githubusercontent.com/MDJ0126/GitChunk/main/install.sh -o install-gitchunk.sh
+bash install-gitchunk.sh /path/to/project
+export PATH="$HOME/.local/bin:$PATH"
+git chunk status
+```
+
+Add the PATH line to your shell profile if needed. The installer builds the native Apple Silicon or Intel CLI; no SwiftUI app build is required. `GITCHUNK_SOURCE` can point to a local checkout, and `GITCHUNK_INSTALL_DIR` overrides the command directory. The Mac installer and GUI still require execution verification on an actual Mac.
+
+The download commands above become available **after these scripts are committed and pushed**. No GitHub Release, Homebrew or winget package has been published as part of this change.
+
+## Rules and presets
+
+The active policy is `.gitchunk/rules.txt`. Presets live in `.gitchunk/presets/*.txt`. Edit them directly, or use **Save rules**, **Load**, and **Save preset** in the app. Loading a preset fills the editor; click Save rules to apply it. Installation also saves the current editor contents.
+
+```gitignore
+# Include assets and selected file types
+Assets/**
+*.psd
+*.wav
+# Exclude a subtree; the last matching rule wins
+!Assets/Small/**
+```
+
+- Only matching files **larger than 50 MiB** become chunks of at most 49 MiB.
+- `*` matches within a path segment, `**` spans directories, and `?` matches one character.
+- A pattern without `/` matches names at any depth. `/Assets/**` anchors to the root. A trailing `/` matches a directory subtree.
+- `#` begins a comment, `!` excludes a match, and the last matching rule wins. Unmatched files are excluded.
+- `default` includes all large files; `unity` targets Assets; `unreal` targets Content.
+- This is a limited .gitignore-like syntax. Escapes and character classes are not supported. Use `/` for paths.
+- `.meta`, Git settings, the tool, and both storage directories are always excluded.
+- Excluded files remain ordinary Git files. Commit/push guards reject ordinary blobs of 100 MiB or more.
+
+Changing a policy never prevents restoration of an existing pointer. To change how already tracked files are stored, renormalize and commit. Commit rules and presets to share them with teammates. Existing custom rules and presets are not replaced just to change UI language.
+
+```text
+.gitchunk/
+  rules.txt
+  presets/default.txt
+  presets/unity.txt
+  presets/unreal.txt
+  presets/my-project.txt
+  GitChunk.exe                   # Windows installation tool
+  objects/<blob-id>              # Actual file data
+```
+
+## Storage and legacy migration
+
+The clean filter stores a small pointer at the original Git path. The pre-commit hook adds only chunks referenced by staged pointers. The smudge filter verifies chunk and full-file SHA-256 hashes and restores the original. Do not delete chunk data.
+
+ResourceSplitter pointer-v1 and historical `.resourcesplitter` commits remain readable. Installing Git Chunk verifies and copies local legacy chunks into `.gitchunk/objects`, then archives the old directory under Git's local metadata. Unknown legacy files are preserved in that backup. If a legacy application keeps the directory locked, close it and reinstall to finish archiving.
+
+The active executable also lives in Git metadata, so checking out a commit from before installation cannot remove the active filter. Legacy filter names and the pointer protocol remain supported for history compatibility. Recovery-only legacy split/join CLI commands remain available; the app UI is installation-only. Existing raw/LFS history is not automatically rewritten.
+
+## Build and verification
+
+Windows GUI:
+
+```powershell
+dotnet publish Tools/ResourceSplitter/ResourceSplitter.csproj -c Release -r win-x64 -o publish/windows
+```
+
+Windows CLI only:
+
+```powershell
+dotnet publish Tools/ResourceSplitter/ResourceSplitter.csproj -c Release -r win-x64 -p:Headless=true -o publish/cli
+```
+
+Mac GUI (macOS 13+, Xcode Command Line Tools, .NET SDK):
+
+```bash
+bash Tools/ResourceSplitter/Mac/Build.sh osx-arm64
+bash Tools/ResourceSplitter/Mac/Build.sh osx-x64
+```
+
+Output: `Tools/ResourceSplitter/bin/mac/<RID>/GitChunk.app` and ZIP. Mac packages use local ad-hoc signing. GUI compilation/execution and the source installer on macOS are not yet verified on a Mac. Shared Apple Silicon and Intel backends are cross-buildable on Windows.
+
+GitHub Actions **Build Git Chunk** is manual-only. Integration checks cover rules, presets, normal blobs, legacy migration, clone/pull/checkout, stash, GC and corrupted-data rejection. Source-directory and project-file names remain ResourceSplitter for path compatibility; product and storage names are Git Chunk and `.gitchunk`.
+
+PowerShell GUI-executable commands need `| Out-Host` when output and completion must be awaited. The headless CLI installed by Install.ps1 runs as a console executable.
+
+## 한국어 요약
+
+앱 기본 언어는 영어입니다. 저장소 최상위 폴더를 선택하고 **Install Git Chunk**를 누르면 설치와 최초 원본 복원을 처리합니다. 규칙은 `.gitchunk/rules.txt`, 프리셋은 `.gitchunk/presets`에 보관합니다.
+
+명령어 설치 스크립트는 EXE를 직접 내려받을 필요 없이 소스를 받아 CLI를 빌드·설치합니다. 현재 Git과 .NET SDK가 필요하며, 내부 실행 파일은 자동 설치됩니다. 스크립트를 커밋·푸시한 뒤 위 다운로드 명령을 사용할 수 있습니다.
+
+기존 `.resourcesplitter` 조각은 검증 후 `.gitchunk`로 통합하고, 이전 폴더 전체는 Git 내부에 백업합니다. 과거 커밋 복원은 유지합니다. 자세한 한국어 설명은 [README.ko.md](README.ko.md)를 참고하세요.
