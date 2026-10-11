@@ -36,16 +36,24 @@ class Program
     static bool Reserved(string relative)
     {
         var segments = relative.Replace('\\', '/').Split('/');
-        return segments.Any(s => new[] { ".git", ".svn", ".hg", ".resourcesplitter", ".gitchunk" }.Contains(s.ToLowerInvariant())) ||
+        return segments.Any(s => new[] { ".git", ".svn", ".hg", ProjectIdentity.LegacyStorage, ProjectIdentity.Storage }.Contains(s.ToLowerInvariant())) ||
             segments.Any(s => s.Equals("ResourceParts", StringComparison.OrdinalIgnoreCase) || s.StartsWith("ResourceParts.staging-", StringComparison.OrdinalIgnoreCase) || s.StartsWith("ResourceParts.previous-", StringComparison.OrdinalIgnoreCase)) ||
-            segments[^1].StartsWith("ResourceSplitter.", StringComparison.OrdinalIgnoreCase) ||
-            segments[^1].StartsWith("GitChunk.", StringComparison.OrdinalIgnoreCase) ||
-            relative.Replace('\\', '/').StartsWith("Tools/ResourceSplitter/", StringComparison.OrdinalIgnoreCase);
+            segments[^1].StartsWith(ProjectIdentity.LegacyName + ".", StringComparison.OrdinalIgnoreCase) ||
+            segments[^1].StartsWith(ProjectIdentity.Name + ".", StringComparison.OrdinalIgnoreCase) ||
+            relative.Replace('\\', '/').StartsWith(ProjectIdentity.SourceDirectory, StringComparison.OrdinalIgnoreCase) ||
+            relative.Replace('\\', '/').StartsWith(ProjectIdentity.LegacySourceDirectory, StringComparison.OrdinalIgnoreCase);
+    }
+    static string InlineManifestPath(string root) {
+        var current = Inside(root, ProjectIdentity.ManifestFile);
+        var legacy = Inside(root, ProjectIdentity.LegacyManifestFile); return File.Exists(current) || !File.Exists(legacy) ? current : legacy;
     }
     static Settings LoadSettings(string root)
     {
-        var path = Inside(root, "ResourceSplitter.settings.json");
-        if (!File.Exists(path)) File.WriteAllText(path, JsonSerializer.Serialize(Settings.Default, JsonOptions));
+        var path = Inside(root, ProjectIdentity.SettingsFile);
+        if (!File.Exists(path)) {
+            var legacy = Inside(root, ProjectIdentity.LegacySettingsFile);
+            File.WriteAllText(path, File.Exists(legacy) ? File.ReadAllText(legacy) : JsonSerializer.Serialize(Settings.Default, JsonOptions));
+        }
         var settings = JsonSerializer.Deserialize<Settings>(File.ReadAllText(path)) ?? throw new Exception("Invalid settings.");
         if (settings.IncludePaths == null || settings.IncludePaths.Count == 0 || settings.ExcludeDirectories == null || settings.ExcludeFilePatterns == null)
             throw new Exception("Settings lists must be provided; IncludePaths cannot be empty.");
@@ -81,7 +89,7 @@ class Program
     }
     static void Split(string root, long chunk)
     {
-        var manifestPath = Inside(root, "ResourceSplitter.manifest.json");
+        var manifestPath = InlineManifestPath(root);
         if (File.Exists(manifestPath)) throw new Exception("Inline parts already exist; restore them before splitting again.");
         var files = Resources(root, LoadSettings(root)).Distinct(FileSystemPaths.Comparer)
             .Where(path => new FileInfo(path).Length > 50L * 1024 * 1024)
@@ -190,7 +198,7 @@ class Program
     }
     static void Join(string root)
     {
-        var inlineManifest = Inside(root, "ResourceSplitter.manifest.json");
+        var inlineManifest = InlineManifestPath(root);
         bool inline = File.Exists(inlineManifest);
         var output = inline ? root : Inside(root, "ResourceParts");
         var manifest = JsonSerializer.Deserialize<Manifest>(File.ReadAllText(inline ? inlineManifest : Inside(output, "manifest.json"))) ?? throw new Exception("Invalid manifest.");
@@ -298,12 +306,12 @@ class Program
             if (chunk < 1 || chunk > 49L * 1024 * 1024) throw new Exception("Chunk size must be 1..51380224 bytes (49 MiB).");
             if (mode is "1" or "split")
             {
-                if (File.Exists(Inside(root, "ResourceSplitter.manifest.json"))) throw new Exception("Restore legacy .part files before splitting.");
+                if (File.Exists(InlineManifestPath(root))) throw new Exception("Restore legacy .part files before splitting.");
                 GitIntegration.ManualSplit(root, Resources(root, LoadSettings(root)).Distinct(FileSystemPaths.Comparer), (int)chunk);
             }
             else if (mode is "2" or "join")
             {
-                if (File.Exists(Inside(root, "ResourceSplitter.manifest.json")) || File.Exists(Inside(root, "ResourceParts/manifest.json"))) Join(root);
+                if (File.Exists(InlineManifestPath(root)) || File.Exists(Inside(root, "ResourceParts/manifest.json"))) Join(root);
                 GitIntegration.ManualJoin(root);
             }
             else if (mode == "legacy-split") Split(root, chunk);

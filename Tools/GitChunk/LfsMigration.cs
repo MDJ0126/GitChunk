@@ -90,7 +90,7 @@ static partial class GitIntegration
             if (!File.Exists(path)) continue;
             var content = File.ReadAllText(path);
             if (StandardLfsHook(content, name)) continue;
-            if (name is "pre-commit" or "pre-push" && !content.Contains("# GitChunk managed hook") && !content.Contains("# ResourceSplitter managed hook"))
+            if (name is "pre-commit" or "pre-push" && !content.Contains(ProjectIdentity.ManagedHook) && !content.Contains(ProjectIdentity.LegacyManagedHook))
                 throw new Exception("Custom hook must be integrated manually: " + path);
         }
         // Fetch into LFS's cache without checking out or overwriting working files.

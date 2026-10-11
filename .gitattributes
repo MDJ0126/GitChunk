@@ -1,22 +1,10 @@
-
-# ResourceSplitter automatic storage
-* filter=resourcesplitter -text
-*.meta -filter
-.gitattributes -filter
-.gitignore -filter
-.resourcesplitter/** -filter -text -diff -merge
-ResourceSplitter.* -filter
-Tools/ResourceSplitter/** -filter
-
 # GitChunk automatic storage
 * filter=gitchunk -text
 *.meta -filter
 .gitattributes -filter
 .gitignore -filter
 .gitchunk/** -filter -text -diff -merge
-.gitchunk/rules.txt -filter text eol=lf diff
-.resourcesplitter/** -filter -text -diff -merge
-GitChunk.* -filter
-ResourceSplitter.* -filter
-Tools/ResourceSplitter/** -filter
+.chunkignore -filter text eol=lf diff
 .gitchunk/chunks.txt -filter text eol=lf diff
+GitChunk.* -filter
+Tools/GitChunk/** -filter

@@ -21,7 +21,7 @@ if ($SourcePath) {
     & git clone --depth 1 https://github.com/MDJ0126/GitChunk.git $sourceRoot
     if ($LASTEXITCODE -ne 0) { throw 'Could not download Git Chunk source.' }
 }
-$project = Join-Path $sourceRoot 'Tools/ResourceSplitter/ResourceSplitter.csproj'
+$project = Join-Path $sourceRoot 'Tools/GitChunk/GitChunk.csproj'
 if (-not (Test-Path -LiteralPath $project)) { throw 'Git Chunk project not found.' }
 $rid = if ([Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString() -eq 'Arm64') { 'win-arm64' } else { 'win-x64' }
 $publish = Join-Path $work 'publish'

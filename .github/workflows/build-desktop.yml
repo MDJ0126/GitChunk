@@ -12,15 +12,16 @@ jobs:
         with:
           dotnet-version: 9.0.x
       - name: Build Windows GUI
-        run: dotnet publish Tools/ResourceSplitter/ResourceSplitter.csproj -c Release -r win-x64 -o publish/windows
+        run: dotnet publish Tools/GitChunk/GitChunk.csproj -c Release -r win-x64 -o publish/windows
       - name: Test Windows data and Git
         shell: pwsh
         run: |
           Copy-Item publish/windows/GitChunk.exe GitChunk.exe -Force
-          ./Tools/ResourceSplitter/Test-Unified.ps1
-          ./Tools/ResourceSplitter/Test-Git.ps1
-          ./Tools/ResourceSplitter/Test-Lfs.ps1
-          python Tools/ResourceSplitter/Test-Rules.py GitChunk.exe
+          ./Tools/GitChunk/Test-Unified.ps1
+          ./Tools/GitChunk/Test-Git.ps1
+          ./Tools/GitChunk/Test-Lfs.ps1
+          python Tools/GitChunk/Test-Rules.py GitChunk.exe
+          python Tools/GitChunk/Test-Identity.py GitChunk.exe
       - uses: actions/upload-artifact@v4
         with:
           name: GitChunk-Windows
@@ -41,12 +42,13 @@ jobs:
         with:
           dotnet-version: 9.0.x
       - name: Build macOS app
-        run: bash Tools/ResourceSplitter/Mac/Build.sh ${{ matrix.rid }}
+        run: bash Tools/GitChunk/Mac/Build.sh ${{ matrix.rid }}
       - name: Test native Mac core
         run: |
-          python3 Tools/ResourceSplitter/Mac/Test.py "Tools/ResourceSplitter/bin/mac/${{ matrix.rid }}/GitChunk.app/Contents/MacOS/GitChunk-cli"
-          python3 Tools/ResourceSplitter/Test-Rules.py "Tools/ResourceSplitter/bin/mac/${{ matrix.rid }}/GitChunk.app/Contents/MacOS/GitChunk-cli"
+          python3 Tools/GitChunk/Mac/Test.py "Tools/GitChunk/bin/mac/${{ matrix.rid }}/GitChunk.app/Contents/MacOS/GitChunk-cli"
+          python3 Tools/GitChunk/Test-Rules.py "Tools/GitChunk/bin/mac/${{ matrix.rid }}/GitChunk.app/Contents/MacOS/GitChunk-cli"
+          python3 Tools/GitChunk/Test-Identity.py "Tools/GitChunk/bin/mac/${{ matrix.rid }}/GitChunk.app/Contents/MacOS/GitChunk-cli"
       - uses: actions/upload-artifact@v4
         with:
           name: GitChunk-Mac-${{ matrix.rid }}
-          path: Tools/ResourceSplitter/bin/mac/${{ matrix.rid }}/GitChunk-${{ matrix.rid }}.zip
+          path: Tools/GitChunk/bin/mac/${{ matrix.rid }}/GitChunk-${{ matrix.rid }}.zip

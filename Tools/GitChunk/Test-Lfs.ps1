@@ -41,11 +41,11 @@ try {
     E git-install "$PWD"
     if ((G rev-parse HEAD) -ne $before) { throw 'Installation committed unexpectedly' }
     if ((Get-FileHash 'large asset.bin').Hash -ne $hash) { throw 'Original hash changed' }
-    if (((G show ':large asset.bin') -join "`n") -notlike 'resourcesplitter-pointer-v1*') { throw 'LFS not converted' }
+    if (((G show ':large asset.bin') -join "`n") -notlike 'gitchunk-pointer-v1*') { throw 'LFS not converted' }
     if (((G show ':small.bin') -join "`n") -ne 'small original') { throw 'Small LFS not converted' }
     if ((G check-attr filter -- nested/other.bin) -notlike '*: gitchunk') { throw 'Nested LFS attributes not converted' }
     if (((G show 'HEAD:large asset.bin') -join "`n") -notlike 'version https://git-lfs*') { throw 'History changed' }
-    if (((G show ':ordinary.apk') -join "`n") -notlike 'resourcesplitter-pointer-v1*') { throw 'Existing ordinary large file not converted' }
+    if (((G show ':ordinary.apk') -join "`n") -notlike 'gitchunk-pointer-v1*') { throw 'Existing ordinary large file not converted' }
     if (@(G ls-files '.gitchunk/objects/*').Count -ne 4) { throw 'Chunks not staged' }
     G commit -m converted
     G push

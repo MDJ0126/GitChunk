@@ -10,18 +10,19 @@ static partial class GitIntegration
         bool managed = false;
         var generated = new HashSet<string> {
             "*.meta -filter", ".gitattributes -filter", ".gitignore -filter",
-            ".gitchunk/** -filter -text -diff -merge", ".resourcesplitter/** -filter -text -diff -merge",
+            ".gitchunk/** -filter -text -diff -merge", ("." + ProjectIdentity.LegacyId + "/** -filter -text -diff -merge"),
             ".chunkignore -filter text eol=lf diff", ".gitchunk/rules.txt -filter text eol=lf diff",
             ".gitchunk/chunks.txt -filter text eol=lf diff", ".gitchunk/presets/** -filter text eol=lf diff",
-            "GitChunk.* -filter", "ResourceSplitter.* -filter", "Tools/ResourceSplitter/** -filter"
+            ProjectIdentity.Name + ".* -filter", ProjectIdentity.LegacyName + ".* -filter",
+            ProjectIdentity.SourceDirectory + "** -filter", ProjectIdentity.LegacySourceDirectory + "** -filter"
         };
         foreach (var line in text.Replace("\r\n", "\n").Split('\n')) {
-            if (line is "# GitChunk automatic storage" or "# ResourceSplitter automatic storage") { managed = true; continue; }
+            if (line is ProjectIdentity.AutomaticStorage or ProjectIdentity.LegacyAutomaticStorage) { managed = true; continue; }
             if (line == "# GitChunk converted LFS files") { managed = false; continue; }
-            if (generated.Contains(line) && (managed || line.StartsWith(".gitchunk/", StringComparison.Ordinal) || line.StartsWith(".resourcesplitter/", StringComparison.Ordinal) || line.StartsWith(".chunkignore ", StringComparison.Ordinal))) continue;
+            if (generated.Contains(line) && (managed || line.StartsWith(ProjectIdentity.Storage + "/", StringComparison.Ordinal) || line.StartsWith(ProjectIdentity.LegacyStorage + "/", StringComparison.Ordinal) || line.StartsWith(".chunkignore ", StringComparison.Ordinal))) continue;
             if (line.TrimStart().StartsWith('#')) { result.Add(line); continue; }
-            if (Regex.IsMatch(line, @"\sfilter=(?:gitchunk|resourcesplitter)(?:\s|$)")) {
-                var stripped = Regex.Replace(line, @"\sfilter=(?:gitchunk|resourcesplitter)(?=\s|$)", "");
+            if (Regex.IsMatch(line, ProjectIdentity.FilterPattern + @"(?:\s|$)")) {
+                var stripped = Regex.Replace(line, ProjectIdentity.FilterPattern + @"(?=\s|$)", "");
                 // Drop lines consisting solely of the generated binary attributes.
                 if (Regex.IsMatch(stripped, @"^(?:""[^""]+""|\S+)(?:\s+(?:-text|-diff|-merge))*\s*$")) continue;
                 result.Add(stripped);
@@ -48,7 +49,7 @@ static partial class GitIntegration
             // Updates replace the tracked runtime. It is archived during uninstall,
             // so an executable-only modification does not endanger user edits.
             var updatedRuntime = change.Length >= 4 && change[..2] is " M" or "M " or "MM"
-                && ToolPath(path) && (path.StartsWith(".gitchunk/", StringComparison.Ordinal) || path.StartsWith(".resourcesplitter/", StringComparison.Ordinal));
+                && ToolPath(path) && (path.StartsWith(ProjectIdentity.Storage + "/", StringComparison.Ordinal) || path.StartsWith(ProjectIdentity.LegacyStorage + "/", StringComparison.Ordinal));
             if (!updatedRuntime)
                 throw new Exception("Uninstall requires a clean tracked working tree and index except for updated GitChunk executables. Commit or stash changes first: " + path);
         }
@@ -73,12 +74,12 @@ static partial class GitIntegration
             if (!File.Exists(path)) continue;
             var text = File.ReadAllText(path).Replace("\r\n", "\n");
             if (text == "#!/bin/sh\n# GitChunk managed hook\nexec " + Quote(runtime) + " " + command + "\n") managedHooks.Add(path);
-            else if (text.Contains("# GitChunk managed hook") || text.Contains("# ResourceSplitter managed hook"))
+            else if (text.Contains(ProjectIdentity.ManagedHook) || text.Contains(ProjectIdentity.LegacyManagedHook))
                 throw new Exception("Modified managed hook must be separated before uninstall: " + path);
         }
         var ignore = SafePath(actual, ".gitignore");
         var chunkIgnore = SafePath(actual, ".chunkignore");
-        var storage = new[] { SafePath(actual, ".gitchunk"), SafePath(actual, ".resourcesplitter") }.Where(Directory.Exists).ToList();
+        var storage = new[] { SafePath(actual, ProjectIdentity.Storage), SafePath(actual, ProjectIdentity.LegacyStorage) }.Where(Directory.Exists).ToList();
         // Check every child before moving a storage directory into the local backup.
         var pending = new Stack<string>(storage);
         while (pending.TryPop(out var folder)) foreach (var child in Directory.EnumerateFileSystemEntries(folder)) {
@@ -121,13 +122,13 @@ static partial class GitIntegration
                 text = Regex.Replace(text, @"(?m)^# GitChunk chunk cache \(required chunks are staged by the hook\)\r?\n/\.gitchunk/objects/\r?\n", "");
                 File.WriteAllText(ignore, text, new UTF8Encoding(false));
             }
-            foreach (var driver in new[] { "gitchunk", "resourcesplitter" })
+            foreach (var driver in new[] { ProjectIdentity.Id, ProjectIdentity.LegacyId })
                 foreach (var (key, value) in new[] { ("clean", Quote(runtime) + " git-clean %f"), ("smudge", Quote(runtime) + " git-smudge") }) {
                     var name = "filter." + driver + "." + key;
                     string current; try { current = Text("config", "--local", "--get", name); } catch { continue; }
                     if (current == value) Text("config", "--local", "--unset-all", name);
                 }
-            foreach (var driver in new[] { "gitchunk", "resourcesplitter" }) {
+            foreach (var driver in new[] { ProjectIdentity.Id, ProjectIdentity.LegacyId }) {
                 string settings; try { settings = Text("config", "--local", "--get-regexp", "^filter\\." + driver + "\\.(clean|smudge)$"); } catch { settings = ""; }
                 if (settings.Length == 0) { try { Text("config", "--local", "--unset-all", "filter." + driver + ".required"); } catch { } }
             }
@@ -142,7 +143,7 @@ static partial class GitIntegration
                 moved.Add((folder, destination)); MoveUninstallStorage(folder, destination);
             }
             if (File.Exists(chunkIgnore)) File.Delete(chunkIgnore);
-            foreach (var entry in entries.Where(e => e.Path == ".chunkignore" || e.Path.StartsWith(".gitchunk/", StringComparison.Ordinal) || e.Path.StartsWith(".resourcesplitter/", StringComparison.Ordinal)))
+            foreach (var entry in entries.Where(e => e.Path == ".chunkignore" || e.Path.StartsWith(ProjectIdentity.Storage + "/", StringComparison.Ordinal) || e.Path.StartsWith(ProjectIdentity.LegacyStorage + "/", StringComparison.Ordinal)))
                 Text("update-index", "--force-remove", "--", entry.Path);
             foreach (var path in attributes.Where(p => p != infoAttributes).Append(ignore)) {
                 var relative = Path.GetRelativePath(actual, path).Replace('\\', '/');

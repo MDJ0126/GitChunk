@@ -1,13 +1,10 @@
-Tools/ResourceSplitter/bin/
-Tools/ResourceSplitter/obj/
-Tools/ResourceSplitter/Tests/**/bin/
-Tools/ResourceSplitter/Tests/**/obj/
+Tools/GitChunk/bin/
+Tools/GitChunk/obj/
+Tools/GitChunk/Tests/**/bin/
+Tools/GitChunk/Tests/**/obj/
 /dist/
 /publish/
 /packages/
-
-# ResourceSplitter chunk cache (required chunks are staged by the hook)
-/.resourcesplitter/objects/
 
 # GitChunk chunk cache (required chunks are staged by the hook)
 /.gitchunk/objects/

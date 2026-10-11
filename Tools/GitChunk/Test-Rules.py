@@ -57,7 +57,7 @@ with tempfile.TemporaryDirectory(prefix='GitChunk-rules-') as temp:
     run(root, 'git', 'add', '.')
     run(root, 'git', 'commit', '-m', 'Git Chunk custom rules')
     current = run(root, 'git', 'rev-parse', 'HEAD').strip().decode()
-    assert run(root, 'git', 'show', 'HEAD:Assets/한글 picture.bmp').startswith(b'resourcesplitter-pointer-v1\n')
+    assert run(root, 'git', 'show', 'HEAD:Assets/한글 picture.bmp').startswith(b'gitchunk-pointer-v1\n')
     assert run(root, 'git', 'cat-file', '-s', 'HEAD:Assets/Small/skip.bmp').strip() == b'62914560'
     assert run(root, 'git', 'cat-file', '-s', 'HEAD:Other/raw.bin').strip() == b'62914560'
     files = run(root, 'git', 'ls-tree', '-r', '--name-only', 'HEAD')

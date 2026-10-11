@@ -15,7 +15,7 @@ else
   git clone --depth 1 https://github.com/MDJ0126/GitChunk.git "$source_root"
 fi
 case "$(uname -m)" in arm64) rid=osx-arm64 ;; x86_64) rid=osx-x64 ;; *) echo 'Unsupported CPU architecture.' >&2; exit 1 ;; esac
-dotnet publish "$source_root/Tools/ResourceSplitter/ResourceSplitter.csproj" -c Release -r "$rid" -p:Headless=true --self-contained true -o "$work/publish"
+dotnet publish "$source_root/Tools/GitChunk/GitChunk.csproj" -c Release -r "$rid" -p:Headless=true --self-contained true -o "$work/publish"
 install_dir="${GITCHUNK_INSTALL_DIR:-$HOME/.local/bin}"
 mkdir -p "$install_dir"
 cp "$work/publish/GitChunk" "$install_dir/git-chunk"

@@ -11,20 +11,20 @@ static partial class GitIntegration
 {
     const long Threshold = 50L * 1024 * 1024;
     const int ChunkSize = 49 * 1024 * 1024;
-    const string Prefix = "resourcesplitter-pointer-v1\n";
-    const string Store = ".gitchunk/objects/";
+    const string Prefix = ProjectIdentity.PointerPrefix;
+    const string Store = ProjectIdentity.Objects;
     static string InstalledToolName => OperatingSystem.IsWindows() ? "GitChunk.exe" : "GitChunk-osx-" + (RuntimeInformation.ProcessArchitecture == Architecture.Arm64 ? "arm64" : "x64");
     static string Quote(string path) => "'" + path.Replace('\\', '/').Replace("'", "'\\''") + "'";
-    static string RuntimeTool() => Path.Combine(Path.GetFullPath(Text("rev-parse", "--git-path", "gitchunk")), InstalledToolName);
+    static string RuntimeTool() => Path.Combine(Path.GetFullPath(Text("rev-parse", "--git-path", ProjectIdentity.Id)), InstalledToolName);
     static void MigrateLegacyStorage(string root)
     {
-        var legacy = SafePath(root, ".resourcesplitter");
+        var legacy = SafePath(root, ProjectIdentity.LegacyStorage);
         if (!Directory.Exists(legacy)) return;
-        var oldObjects = SafePath(root, ".resourcesplitter/objects");
+        var oldObjects = SafePath(root, ProjectIdentity.LegacyStorage + "/objects");
         if (Directory.Exists(oldObjects)) foreach (var file in Directory.EnumerateFiles(oldObjects)) {
             var oid = Path.GetFileName(file);
             if (!Oid(oid)) continue;
-            var source = SafePath(root, ".resourcesplitter/objects/" + oid);
+            var source = SafePath(root, ProjectIdentity.LegacyObjects + oid);
             var data = File.ReadAllBytes(source);
             if (BlobId(data, oid.Length == 64) != oid) throw new Exception("Corrupt legacy chunk: " + oid + ". Legacy storage was preserved.");
             var target = SafePath(root, Store + oid); Directory.CreateDirectory(Path.GetDirectoryName(target)!);
@@ -40,9 +40,9 @@ static partial class GitIntegration
         if (!backup.StartsWith(Path.GetFullPath(runtimeDirectory) + Path.DirectorySeparatorChar, FileSystemPaths.Comparison)) throw new Exception("Invalid legacy backup path.");
         Directory.CreateDirectory(runtimeDirectory);
         try { Directory.Move(legacy, backup); Console.WriteLine("Legacy storage migrated to .gitchunk; backup retained in Git metadata."); }
-        catch (IOException) { Console.WriteLine("Legacy chunks copied and verified. Close any legacy app, then reinstall to archive .resourcesplitter."); }
+        catch (IOException) { Console.WriteLine(("Legacy chunks copied and verified. Close any legacy app, then reinstall to archive ." + ProjectIdentity.LegacyId + ".")); }
     }
-    static bool ToolPath(string path) => path is "GitChunk.exe" or ".gitchunk/GitChunk.exe" or "GitChunk-osx-arm64" or "GitChunk-osx-x64" or ".gitchunk/GitChunk-osx-arm64" or ".gitchunk/GitChunk-osx-x64" or "ResourceSplitter.exe" or ".resourcesplitter/ResourceSplitter.exe" or "ResourceSplitter-osx-arm64" or "ResourceSplitter-osx-x64" or ".resourcesplitter/ResourceSplitter-osx-arm64" or ".resourcesplitter/ResourceSplitter-osx-x64";
+    static bool ToolPath(string path) => path is "GitChunk.exe" or ".gitchunk/GitChunk.exe" or "GitChunk-osx-arm64" or "GitChunk-osx-x64" or ".gitchunk/GitChunk-osx-arm64" or ".gitchunk/GitChunk-osx-x64" or (ProjectIdentity.LegacyName + ".exe") or ("." + ProjectIdentity.LegacyId + "/" + ProjectIdentity.LegacyName + ".exe") or (ProjectIdentity.LegacyName + "-osx-arm64") or (ProjectIdentity.LegacyName + "-osx-x64") or ("." + ProjectIdentity.LegacyId + "/" + ProjectIdentity.LegacyName + "-osx-arm64") or ("." + ProjectIdentity.LegacyId + "/" + ProjectIdentity.LegacyName + "-osx-x64");
     record Chunk(string Oid, int Size, string Sha256);
     record Pointer(long Size, string Sha256, List<Chunk> Chunks);
 
@@ -90,6 +90,7 @@ static partial class GitIntegration
     static Pointer? Parse(byte[] bytes)
     {
         var prefix = Encoding.UTF8.GetBytes(Prefix);
+        if (!bytes.AsSpan().StartsWith(prefix)) prefix = Encoding.UTF8.GetBytes(ProjectIdentity.LegacyPointerPrefix);
         if (!bytes.AsSpan().StartsWith(prefix)) return null;
         if (bytes.Length > 1024 * 1024) throw new Exception("Pointer exceeds size limit.");
         var p = JsonSerializer.Deserialize<Pointer>(bytes.AsSpan(prefix.Length)) ?? throw new Exception("Invalid pointer.");
@@ -100,7 +101,7 @@ static partial class GitIntegration
     static void Clean(string? relative)
     {
         // Spool to a private temporary file so memory use is bounded by one chunk.
-        var temp = Path.Combine(Path.GetTempPath(), "ResourceSplitter-" + Guid.NewGuid().ToString("N"));
+        var temp = Path.Combine(Path.GetTempPath(), ProjectIdentity.TemporaryPrefix + Guid.NewGuid().ToString("N"));
         try
         {
             using var file = new FileStream(temp, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None);
@@ -112,7 +113,11 @@ static partial class GitIntegration
                 // Reject malformed reserved pointers instead of silently accepting them.
                 if (file.Length <= 1024 * 1024) { var b = new byte[(int)file.Length]; file.ReadExactly(b);
                     if (Encoding.UTF8.GetString(b).StartsWith("version https://git-lfs.github.com/spec/v1\n")) throw new Exception("LFS pointer is not an original asset. Run git chunk install to convert current LFS files first.");
-                    Parse(b); output.Write(b); }
+                    Parse(b);
+                    var legacyPrefix = Encoding.UTF8.GetBytes(ProjectIdentity.LegacyPointerPrefix);
+                    if (b.AsSpan().StartsWith(legacyPrefix)) {
+                        output.Write(Encoding.UTF8.GetBytes(Prefix)); output.Write(b.AsSpan(legacyPrefix.Length));
+                    } else output.Write(b); }
                 else file.CopyTo(output);
                 return;
             }
@@ -120,7 +125,7 @@ static partial class GitIntegration
             var chunks = new List<Chunk>();
             var root = Text("rev-parse", "--show-toplevel");
             var directory = Path.Combine(root, Store);
-            if ((Directory.Exists(Path.Combine(root, ".gitchunk")) && (File.GetAttributes(Path.Combine(root, ".gitchunk")) & FileAttributes.ReparsePoint) != 0)
+            if ((Directory.Exists(Path.Combine(root, ProjectIdentity.Storage)) && (File.GetAttributes(Path.Combine(root, ProjectIdentity.Storage)) & FileAttributes.ReparsePoint) != 0)
                 || (Directory.Exists(directory) && (File.GetAttributes(directory) & FileAttributes.ReparsePoint) != 0)) throw new Exception("Chunk directory cannot be a symbolic link/junction.");
             Directory.CreateDirectory(directory);
             while (file.Position < file.Length)
@@ -131,7 +136,7 @@ static partial class GitIntegration
                 if (!Oid(oid)) throw new Exception("Invalid Git object ID.");
                 // Stash does not run pre-commit. Keep generated chunks reachable
                 // locally even when only an uncommitted/stashed pointer uses them.
-                Text("update-ref", "refs/resourcesplitter/cache/" + oid, oid);
+                Text("update-ref", ProjectIdentity.CacheRefs + oid, oid);
                 chunks.Add(new Chunk(oid, bytes.Length, Hash(bytes)));
                 var path = Path.Combine(directory, oid);
                 if (!File.Exists(path))
@@ -217,7 +222,7 @@ static partial class GitIntegration
     {
         foreach (var path in Directory.EnumerateFileSystemEntries(directory))
         {
-            if (new[] { ".git", ".svn", ".hg", ".resourcesplitter", ".gitchunk", "ResourceParts" }.Contains(Path.GetFileName(path), StringComparer.OrdinalIgnoreCase)) continue;
+            if (new[] { ".git", ".svn", ".hg", ProjectIdentity.LegacyStorage, ProjectIdentity.Storage, "ResourceParts" }.Contains(Path.GetFileName(path), StringComparer.OrdinalIgnoreCase)) continue;
             if ((File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0) continue;
             if (Directory.Exists(path)) { foreach (var file in PointerFiles(root, path)) yield return file; }
             else if (new FileInfo(path).Length <= 1024 * 1024 && Parse(File.ReadAllBytes(path)) != null) yield return SafePath(root, Path.GetRelativePath(root, path));
@@ -251,6 +256,13 @@ static partial class GitIntegration
         var prefix = Encoding.UTF8.GetBytes(Prefix);
         var head = new byte[prefix.Length];
         var count = source.ReadAtLeast(head, head.Length, throwOnEndOfStream: false);
+        var legacyPrefix = Encoding.UTF8.GetBytes(ProjectIdentity.LegacyPointerPrefix);
+        if (count == head.Length && legacyPrefix.AsSpan().StartsWith(head))
+        {
+            Array.Resize(ref head, legacyPrefix.Length);
+            count += source.ReadAtLeast(head.AsSpan(count), head.Length - count, throwOnEndOfStream: false);
+            prefix = legacyPrefix;
+        }
         if (count != head.Length || !head.AsSpan().SequenceEqual(prefix))
         {
             destination.Write(head.AsSpan(0, count)); source.CopyTo(destination); return;
@@ -264,7 +276,7 @@ static partial class GitIntegration
         }
         var bytes = input.ToArray(); var pointer = Parse(bytes);
         if (pointer == null) { destination.Write(bytes); return; }
-        var temp = Path.Combine(Path.GetTempPath(), "ResourceSplitter-" + Guid.NewGuid().ToString("N"));
+        var temp = Path.Combine(Path.GetTempPath(), ProjectIdentity.TemporaryPrefix + Guid.NewGuid().ToString("N"));
         try
         {
             using var file = new FileStream(temp, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None);
@@ -275,7 +287,7 @@ static partial class GitIntegration
                 if (root != null)
                 {
                     var path = SafePath(root, Store + chunk.Oid);
-                    if (!File.Exists(path)) path = SafePath(root, ".resourcesplitter/objects/" + chunk.Oid);
+                    if (!File.Exists(path)) path = SafePath(root, ProjectIdentity.LegacyObjects + chunk.Oid);
                     part = File.Exists(path) ? File.ReadAllBytes(path) : Git(null, "-C", root, "cat-file", "blob", chunk.Oid);
                 }
                 else part = Git(null, "cat-file", "blob", chunk.Oid);
@@ -297,7 +309,7 @@ static partial class GitIntegration
         {
             var tab = entry.IndexOf('\t'); var fields = entry[..tab].Split(' '); var path = entry[(tab + 1)..];
             if (fields[2] != "0") throw new Exception("Resolve merge conflicts before committing.");
-            if (path.StartsWith(Store, StringComparison.Ordinal) || path.StartsWith(".resourcesplitter/objects/", StringComparison.Ordinal)) { existing.Add(path); continue; }
+            if (path.StartsWith(Store, StringComparison.Ordinal) || path.StartsWith(ProjectIdentity.LegacyObjects, StringComparison.Ordinal)) { existing.Add(path); continue; }
             if (fields[0] == "160000") continue;
             if (!candidates.TryGetValue(fields[1], out var paths)) candidates[fields[1]] = paths = new List<string>();
             paths.Add(path);
@@ -331,7 +343,7 @@ static partial class GitIntegration
         // Update only chunk entries; preserve every user-selected staged asset version.
         var root = Text("rev-parse", "--show-toplevel");
         var directory = Path.Combine(root, Store);
-        foreach (var folder in new[] { Path.Combine(root, ".gitchunk"), directory })
+        foreach (var folder in new[] { Path.Combine(root, ProjectIdentity.Storage), directory })
             if (Directory.Exists(folder) && (File.GetAttributes(folder) & FileAttributes.ReparsePoint) != 0) throw new Exception("Chunk directory cannot be a symbolic link/junction.");
         Directory.CreateDirectory(directory);
         foreach (var chunk in chunks.Values)
@@ -373,7 +385,7 @@ static partial class GitIntegration
             var tab = entry.IndexOf('\t'); var fields = entry[..tab].Split(' '); var path = entry[(tab + 1)..];
             if (fields[2] != "0") throw new Exception("Resolve merge conflicts before updating the chunk list.");
             if (fields[0] != "100644" && fields[0] != "100755") continue;
-            if (path.StartsWith(".gitchunk/", StringComparison.Ordinal) || path.StartsWith(".resourcesplitter/", StringComparison.Ordinal)) continue;
+            if (path.StartsWith(ProjectIdentity.Storage + "/", StringComparison.Ordinal) || path.StartsWith(ProjectIdentity.LegacyStorage + "/", StringComparison.Ordinal)) continue;
             files.Add((path, fields[1]));
         }
         var ids = files.Select(x => x.Oid).Distinct().ToArray();
@@ -420,9 +432,9 @@ static partial class GitIntegration
         foreach (var name in new[] { "pre-commit", "pre-push" })
         {
             var path = Path.Combine(hooks, name);
-            if (File.Exists(path) && !File.ReadAllText(path).Contains("# GitChunk managed hook") && !File.ReadAllText(path).Contains("# ResourceSplitter managed hook") && !StandardLfsHook(File.ReadAllText(path), name)) throw new Exception("Existing hook must be integrated manually: " + path);
+            if (File.Exists(path) && !File.ReadAllText(path).Contains(ProjectIdentity.ManagedHook) && !File.ReadAllText(path).Contains(ProjectIdentity.LegacyManagedHook) && !StandardLfsHook(File.ReadAllText(path), name)) throw new Exception("Existing hook must be integrated manually: " + path);
         }
-        var tool = Path.Combine(actual, ".gitchunk", InstalledToolName);
+        var tool = Path.Combine(actual, ProjectIdentity.Storage, InstalledToolName);
         if (Directory.Exists(Path.GetDirectoryName(tool)) && (File.GetAttributes(Path.GetDirectoryName(tool)!) & FileAttributes.ReparsePoint) != 0) throw new Exception("Tool directory cannot be a symbolic link/junction.");
         Directory.CreateDirectory(Path.GetDirectoryName(tool)!);
         ChunkIgnore.EnsureDefaults(actual);
@@ -446,8 +458,8 @@ static partial class GitIntegration
         if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(runtime, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute | UnixFileMode.GroupRead | UnixFileMode.GroupExecute | UnixFileMode.OtherRead | UnixFileMode.OtherExecute);
         var attributes = Path.Combine(actual, ".gitattributes");
         var old = File.Exists(attributes) ? File.ReadAllText(attributes) : "";
-        if (!old.Contains("# GitChunk automatic storage")) File.AppendAllText(attributes,
-            "\n# GitChunk automatic storage\n* filter=gitchunk -text\n*.meta -filter\n.gitattributes -filter\n.gitignore -filter\n.gitchunk/** -filter -text -diff -merge\n.chunkignore -filter text eol=lf diff\n.gitchunk/chunks.txt -filter text eol=lf diff\n.resourcesplitter/** -filter -text -diff -merge\nGitChunk.* -filter\nResourceSplitter.* -filter\nTools/ResourceSplitter/** -filter\n", new UTF8Encoding(false));
+        if (!old.Contains(ProjectIdentity.AutomaticStorage)) File.AppendAllText(attributes,
+            ProjectIdentity.Attributes, new UTF8Encoding(false));
         else
         {
             var updated = old.Replace("\r\n", "\n");
@@ -462,7 +474,7 @@ static partial class GitIntegration
         if (!File.Exists(ignore) || !File.ReadAllText(ignore).Contains("/.gitchunk/objects/"))
             File.AppendAllText(ignore, "\n# GitChunk chunk cache (required chunks are staged by the hook)\n/.gitchunk/objects/\n", new UTF8Encoding(false));
         // Historical .gitattributes files still refer to the legacy driver.
-        foreach (var driver in new[] { "gitchunk", "resourcesplitter" }) {
+        foreach (var driver in new[] { ProjectIdentity.Id, ProjectIdentity.LegacyId }) {
             Text("config", "--local", "filter." + driver + ".clean", Quote(runtime) + " git-clean %f");
             Text("config", "--local", "filter." + driver + ".smudge", Quote(runtime) + " git-smudge");
             Text("config", "--local", "filter." + driver + ".required", "true");
@@ -507,7 +519,7 @@ static partial class GitIntegration
         RefreshChunkList(actual);
         var presets = ChunkIgnore.PathFor(actual, "presets");
         if (Directory.Exists(presets)) {
-            var backup = Path.Combine(Text("rev-parse", "--absolute-git-dir"), "gitchunk", "presets-backup-" + Guid.NewGuid().ToString("N"));
+            var backup = Path.Combine(Text("rev-parse", "--absolute-git-dir"), ProjectIdentity.Id, "presets-backup-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(Path.GetDirectoryName(backup)!);
             Directory.Move(presets, backup);
             Console.WriteLine("Old presets backed up: " + backup);
@@ -525,12 +537,12 @@ static partial class GitIntegration
         var clean = Config("filter.gitchunk.clean");
         var smudge = Config("filter.gitchunk.smudge");
         var hooks = Path.GetFullPath(Text("rev-parse", "--git-path", "hooks"));
-        var tool = Path.Combine(actual, ".gitchunk", InstalledToolName);
+        var tool = Path.Combine(actual, ProjectIdentity.Storage, InstalledToolName);
         var runtime = RuntimeTool();
         var attributes = Path.Combine(actual, ".gitattributes");
         bool Hook(string name, string command) => File.Exists(Path.Combine(hooks, name)) && File.ReadAllText(Path.Combine(hooks, name)).Replace("\r\n", "\n") == "#!/bin/sh\n# GitChunk managed hook\nexec " + Quote(runtime) + " " + command + "\n";
-        var installed = File.Exists(runtime) && clean == Quote(runtime) + " git-clean %f" && smudge == Quote(runtime) + " git-smudge" && Config("filter.gitchunk.required") == "true" && Hook("pre-commit", "git-prepare") && Hook("pre-push", "git-check-push") && File.Exists(attributes) && File.ReadAllText(attributes).Contains("# GitChunk automatic storage") && File.Exists(ChunkIgnore.IgnorePath(actual));
-        Console.WriteLine(installed ? "installed" : clean.Length > 0 || smudge.Length > 0 ? "incomplete" : Config("filter.resourcesplitter.clean").Length > 0 ? "legacy" : "not-installed");
+        var installed = File.Exists(runtime) && clean == Quote(runtime) + " git-clean %f" && smudge == Quote(runtime) + " git-smudge" && Config("filter.gitchunk.required") == "true" && Hook("pre-commit", "git-prepare") && Hook("pre-push", "git-check-push") && File.Exists(attributes) && File.ReadAllText(attributes).Contains(ProjectIdentity.AutomaticStorage) && File.Exists(ChunkIgnore.IgnorePath(actual));
+        Console.WriteLine(installed ? "installed" : clean.Length > 0 || smudge.Length > 0 ? "incomplete" : Config("filter." + ProjectIdentity.LegacyId + ".clean").Length > 0 ? "legacy" : "not-installed");
     }
     public static int Run(string[] args)
     {

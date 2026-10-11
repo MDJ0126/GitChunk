@@ -3,7 +3,7 @@ $exe = (Resolve-Path (Join-Path $PSScriptRoot '../../GitChunk.exe')).Path
 $fixture = Join-Path $PSScriptRoot ('bin/git-test-' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $fixture | Out-Null
 function G { & git @args; if ($LASTEXITCODE -ne 0) { throw "git failed: $args" } }
-function E { & $exe @args | Out-Host; if ($LASTEXITCODE -ne 0) { throw "ResourceSplitter failed: $args" } }
+function E { & $exe @args | Out-Host; if ($LASTEXITCODE -ne 0) { throw "GitChunk failed: $args" } }
 function Identity { G config user.name Test; G config user.email test@example.invalid }
 function AssertHash($path,$expected) { if ((Get-FileHash $path).Hash -ne $expected) { throw "Hash mismatch: $path" } }
 Push-Location $fixture
@@ -36,7 +36,7 @@ try {
     G commit -m initial
     AssertHash $asset $edited
     $pointer = G show 'HEAD:Assets/한글 asset.bin'
-    if (($pointer -join "`n") -notlike 'resourcesplitter-pointer-v1*') { throw 'Raw original was committed' }
+    if (($pointer -join "`n") -notlike 'gitchunk-pointer-v1*') { throw 'Raw original was committed' }
     if ((G cat-file -s 'HEAD:Assets/boundary.bin') -ne '52428800') { throw 'Threshold boundary was split' }
     $parts = @(G ls-tree -r --name-only HEAD | Where-Object { $_ -like '.gitchunk/objects/*' })
     if ($parts.Count -ne 2) { throw 'Required chunks not committed' }
@@ -98,7 +98,7 @@ try {
     AssertHash 'Assets/한글 asset.bin' $stashed
     G restore 'Assets/한글 asset.bin'
     # Corrupt/missing pointers fail rather than being restored as an asset.
-    $bad = 'resourcesplitter-pointer-v1' + "`n" + '{"Size":52428801,"Sha256":"INVALID","Chunks":[]}'
+    $bad = 'gitchunk-pointer-v1' + "`n" + '{"Size":52428801,"Sha256":"INVALID","Chunks":[]}'
     $bad | & $exe git-smudge | Out-Null
     if ($LASTEXITCODE -eq 0) { throw 'Malformed pointer accepted' }
     # Shrinking a previously split asset removes obsolete chunk entries.

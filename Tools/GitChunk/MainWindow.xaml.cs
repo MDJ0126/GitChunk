@@ -157,7 +157,7 @@ partial class MainWindow : Window
             var reopened = new MainWindow(); reopened.FolderPath.Text = root; await reopened.RefreshInstallation();
             if (reopened.installation != "installed" || reopened.RulesEditor.Text != window.RulesEditor.Text) throw new Exception("Reopen persistence failed.");
             await window.RemoveInstallation();
-            if (window.installation != "not-installed" || Directory.Exists(Path.Combine(root, ".gitchunk")) || File.Exists(ChunkIgnore.IgnorePath(root))) throw new Exception("GUI uninstall failed: " + window.Log.Text);
+            if (window.installation != "not-installed" || Directory.Exists(Path.Combine(root, ProjectIdentity.Storage)) || File.Exists(ChunkIgnore.IgnorePath(root))) throw new Exception("GUI uninstall failed: " + window.Log.Text);
             Console.WriteLine("PASS: GUI install, ignore list persistence and uninstall."); window.dirty = false; reopened.dirty = false; app.Shutdown(0);
         } catch (Exception ex) { window.dirty = false; Console.Error.WriteLine(ex); app.Shutdown(1); } }; return app.Run(window);
     }

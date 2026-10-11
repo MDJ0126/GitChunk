@@ -17,7 +17,7 @@ Push-Location $fixture
 try {
     & $exe legacy-split | Out-Host
     if ($LASTEXITCODE -ne 0 -or (Test-Path Assets/large.bin) -or !(Test-Path Assets/large.bin.part000002) -or (Test-Path ResourceParts)) { throw 'Large file split failed' }
-    $manifest = Get-Content ResourceSplitter.manifest.json -Raw | ConvertFrom-Json
+    $manifest = Get-Content GitChunk.manifest.json -Raw | ConvertFrom-Json
     if ($manifest.Files.Count -ne 2 -or $manifest.Files[0].Path -ne 'Assets/large.bin') { throw 'Threshold selection failed' }
     foreach ($name in @('boundary.bin','below.bin','empty.bin','small.txt','small.txt.meta')) {
         if ((Get-FileHash ('Assets/' + $name)).Hash -ne $hashes[$name]) { throw "Small or meta file modified: $name" }
@@ -40,7 +40,7 @@ try {
     Set-Content Assets/large.bin.meta 'regenerated GUID metadata'
     $regeneratedHash = (Get-FileHash Assets/large.bin.meta).Hash
     & $exe join | Out-Host
-    if ($LASTEXITCODE -ne 0 -or (Get-FileHash Assets/large.bin).Hash -ne $hashes['large.bin'] -or (Test-Path ResourceSplitter.manifest.json) -or (Test-Path Assets/large.bin.part000001)) { throw 'Restore failed' }
+    if ($LASTEXITCODE -ne 0 -or (Get-FileHash Assets/large.bin).Hash -ne $hashes['large.bin'] -or (Test-Path GitChunk.manifest.json) -or (Test-Path Assets/large.bin.part000001)) { throw 'Restore failed' }
     if ((Get-FileHash Assets/large.bin.meta).Hash -ne $hashes['large.bin.meta'] -or (Test-Path Assets/large.bin.meta.part000001)) { throw 'Original metadata not restored' }
     $preserved = Get-ChildItem Assets -Filter 'large.bin.meta.restore-*'
     if ($preserved.Count -ne 1 -or (Get-FileHash $preserved[0].FullName).Hash -ne $regeneratedHash) { throw 'Regenerated metadata was not retained' }
@@ -53,11 +53,11 @@ try {
     & $exe legacy-split | Out-Host
     if ($LASTEXITCODE -ne 1 -or (Get-FileHash Assets/large.bin.part000001).Hash -ne $collisionHash -or !(Test-Path Assets/large.bin)) { throw 'Collision check failed' }
     Remove-Item Assets/large.bin.part000001
-    $settings = Get-Content ResourceSplitter.settings.json -Raw | ConvertFrom-Json
+    $settings = Get-Content GitChunk.settings.json -Raw | ConvertFrom-Json
     $settings.IncludePaths = @('Assets/small.txt','Assets/boundary.bin','Assets/below.bin','Assets/empty.bin')
-    $settings | ConvertTo-Json -Depth 10 | Set-Content ResourceSplitter.settings.json
+    $settings | ConvertTo-Json -Depth 10 | Set-Content GitChunk.settings.json
     & $exe legacy-split | Out-Host
-    if ($LASTEXITCODE -ne 0 -or (Test-Path ResourceSplitter.manifest.json)) { throw 'No-large-files case failed' }
+    if ($LASTEXITCODE -ne 0 -or (Test-Path GitChunk.manifest.json)) { throw 'No-large-files case failed' }
     'PASS: >50 MiB only; exact/below boundary and small/empty files unchanged; meta preserved; inline chunks; hash restore; corruption and collision guards; no eligible files'
 } finally { Pop-Location }
 exit 0

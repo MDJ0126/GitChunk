@@ -4,11 +4,11 @@ GUI는 설치·설치 상태·프로젝트 규칙만 제공합니다. 앱에서 
 
 ## 데이터와 Git 작업
 
-- 제외 목록에 없는 50 MiB 초과 파일은 Git에 `resourcesplitter-pointer-v1` 호환 복원 정보로 저장합니다. 조각 크기는 49 MiB 이하입니다.
+- 제외 목록에 없는 50 MiB 초과 파일은 Git에 `gitchunk-pointer-v1` 복원 정보 (기존 `resourcesplitter-pointer-v1` 읽기 호환 유지)로 저장합니다. 조각 크기는 49 MiB 이하입니다.
 - 실제 원본 데이터는 `.gitchunk/objects/<blob-id>`에 저장되며 훅이 현재 staged 복원 정보에 필요한 조각만 추가합니다. 사용자가 staged한 원본 버전은 유지합니다.
 - 50 MiB 이하·규칙에서 제외된 파일은 그대로 저장합니다. 일반 blob 100 MiB 이상은 커밋·푸시 검사에서 거부됩니다.
 - smudge는 blob ID로 조각을 읽으므로 체크아웃 순서와 관계없이 복원합니다. 조각 및 원본 SHA-256이 맞지 않으면 실패합니다. 자동 필터 출력에 로그를 섞지 않습니다.
-- clean에서 생성한 조각은 기존 `refs/resourcesplitter/cache/` 참조로 보존하여 stash·GC에서도 보호합니다. 일반 push에는 해당 참조가 전송되지 않지만 `push --mirror`에는 포함될 수 있습니다.
+- clean에서 생성한 조각은 `refs/gitchunk/cache/` 참조로 보존하여 stash·GC에서도 보호합니다. 일반 push에는 해당 참조가 전송되지 않지만 `push --mirror`에는 포함될 수 있습니다.
 - 규칙 변경 후 `git add --renormalize .`로 기존 파일을 반영합니다. 규칙이 달라졌다는 이유로 과거 복원을 막지 않습니다.
 - 데이터 폴더와 Git 이력을 임의로 정리하지 마세요. 전체 용량을 줄이지 않고 중복 내용의 조각 ID를 재사용합니다.
 

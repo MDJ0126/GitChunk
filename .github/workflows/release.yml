@@ -5,7 +5,7 @@ on:
       version:
         description: 'Release version (for example 1.0.0)'
         required: true
-        default: '1.2.3'
+        default: '1.2.4'
 permissions:
   contents: read
 jobs:
@@ -23,19 +23,21 @@ jobs:
           GITCHUNK_SKIP_UPDATE_CHECK: '1'
         run: |
           if ($env:GITCHUNK_VERSION -notmatch '^\d+\.\d+\.\d+$') { throw 'Invalid version' }
-          dotnet publish Tools/ResourceSplitter/ResourceSplitter.csproj -c Release -r win-x64 -p:Version=$env:GITCHUNK_VERSION -o publish/windows
+          dotnet publish Tools/GitChunk/GitChunk.csproj -c Release -r win-x64 -p:Version=$env:GITCHUNK_VERSION -o publish/windows
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
-          dotnet publish Tools/ResourceSplitter/ResourceSplitter.csproj -c Release -r win-x64 -p:Headless=true -p:Version=$env:GITCHUNK_VERSION -o publish/cli
+          dotnet publish Tools/GitChunk/GitChunk.csproj -c Release -r win-x64 -p:Headless=true -p:Version=$env:GITCHUNK_VERSION -o publish/cli
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
-          python Tools/ResourceSplitter/Test-Rules.py publish/cli/GitChunk.exe
+          python Tools/GitChunk/Test-Rules.py publish/cli/GitChunk.exe
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
-          python Tools/ResourceSplitter/Test-Uninstall.py publish/cli/GitChunk.exe
+          python Tools/GitChunk/Test-Uninstall.py publish/cli/GitChunk.exe
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
-          dotnet publish Tools/ResourceSplitter/ResourceSplitter.csproj -c Release -r win-x64 -p:Version=1.3.0 -o publish/updater-fixture
+          python Tools/GitChunk/Test-Identity.py publish/cli/GitChunk.exe
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
-          dotnet run --project Tools/ResourceSplitter/Tests/Updater/Updater.csproj -- publish/updater-tests publish/updater-fixture/GitChunk.exe
+          dotnet publish Tools/GitChunk/GitChunk.csproj -c Release -r win-x64 -p:Version=1.3.0 -o publish/updater-fixture
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
-          ./Tools/ResourceSplitter/Test-Lfs.ps1 -Executable publish/cli/GitChunk.exe
+          dotnet run --project Tools/GitChunk/Tests/Updater/Updater.csproj -- publish/updater-tests publish/updater-fixture/GitChunk.exe
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          ./Tools/GitChunk/Test-Lfs.ps1 -Executable publish/cli/GitChunk.exe
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
       - name: Package installer and portable commands
         shell: pwsh
@@ -68,15 +70,16 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 9.0.x
-      - run: bash Tools/ResourceSplitter/Mac/Build.sh ${{ matrix.rid }}
+      - run: bash Tools/GitChunk/Mac/Build.sh ${{ matrix.rid }}
         env:
           GITCHUNK_VERSION: ${{ inputs.version }}
-      - run: python3 Tools/ResourceSplitter/Test-Rules.py Tools/ResourceSplitter/bin/mac/${{ matrix.rid }}/GitChunk.app/Contents/MacOS/GitChunk-cli
-      - run: python3 Tools/ResourceSplitter/Test-Uninstall.py Tools/ResourceSplitter/bin/mac/${{ matrix.rid }}/GitChunk.app/Contents/MacOS/GitChunk-cli
+      - run: python3 Tools/GitChunk/Test-Rules.py Tools/GitChunk/bin/mac/${{ matrix.rid }}/GitChunk.app/Contents/MacOS/GitChunk-cli
+      - run: python3 Tools/GitChunk/Test-Uninstall.py Tools/GitChunk/bin/mac/${{ matrix.rid }}/GitChunk.app/Contents/MacOS/GitChunk-cli
+      - run: python3 Tools/GitChunk/Test-Identity.py Tools/GitChunk/bin/mac/${{ matrix.rid }}/GitChunk.app/Contents/MacOS/GitChunk-cli
       - uses: actions/upload-artifact@v4
         with:
           name: release-${{ matrix.rid }}
-          path: Tools/ResourceSplitter/bin/mac/${{ matrix.rid }}/GitChunk-${{ matrix.rid }}.zip
+          path: Tools/GitChunk/bin/mac/${{ matrix.rid }}/GitChunk-${{ matrix.rid }}.zip
   publish:
     if: github.ref == 'refs/heads/main'
     needs: [windows, mac]

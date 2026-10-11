@@ -19,7 +19,7 @@ try {
     E split $fixture
     $pointer = [IO.File]::ReadAllBytes($asset)
     if ($pointer.Length -gt 1024 -or (Get-FileHash Assets/large.bin.meta).Hash -ne $meta) { throw 'Unexpected manual split representation' }
-    $p = (Get-Content $asset -Raw).Substring("resourcesplitter-pointer-v1`n".Length) | ConvertFrom-Json
+    $p = (Get-Content $asset -Raw).Substring("gitchunk-pointer-v1`n".Length) | ConvertFrom-Json
     $chunkPath = Join-Path $fixture ('.gitchunk/objects/' + $p.Chunks[0].Oid)
     $chunkBytes = [IO.File]::ReadAllBytes($chunkPath)
     [IO.File]::WriteAllText($chunkPath,'corrupt')

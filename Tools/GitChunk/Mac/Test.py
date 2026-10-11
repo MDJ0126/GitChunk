@@ -22,7 +22,7 @@ def digest(path):
         return hashlib.file_digest(stream, "sha256").hexdigest()
 
 
-with tempfile.TemporaryDirectory(prefix="ResourceSplitter-native-") as temp:
+with tempfile.TemporaryDirectory(prefix="GitChunk-native-") as temp:
     root = Path(temp).resolve()
     writer = root / "writer"
     writer.mkdir()
@@ -42,7 +42,7 @@ with tempfile.TemporaryDirectory(prefix="ResourceSplitter-native-") as temp:
     original, meta_hash = digest(asset), digest(meta)
     run(writer, tool, "split", str(writer))
     pointer_bytes = asset.read_bytes()
-    assert pointer_bytes.startswith(b"resourcesplitter-pointer-v1\n")
+    assert pointer_bytes.startswith(b"gitchunk-pointer-v1\n")
     pointer = json.loads(pointer_bytes.split(b"\n", 1)[1])
     assert len(pointer["Chunks"]) == 2 and digest(meta) == meta_hash
     # Move both files; restoration must follow the pointer's new location.
@@ -66,7 +66,7 @@ with tempfile.TemporaryDirectory(prefix="ResourceSplitter-native-") as temp:
         assert os.access(writer / ".git/hooks/pre-commit", os.X_OK)
     run(writer, "git", "add", ".")
     run(writer, "git", "commit", "-m", "native test")
-    assert run(writer, "git", "show", "HEAD:Assets/moved.bin").startswith("resourcesplitter-pointer-v1\n")
+    assert run(writer, "git", "show", "HEAD:Assets/moved.bin").startswith("gitchunk-pointer-v1\n")
     remote = root / "remote.git"
     run(root, "git", "init", "--bare", str(remote))
     run(writer, "git", "remote", "add", "origin", str(remote))

@@ -1,6 +1,6 @@
 이 폴더는 Git Chunk의 합성 데이터 예제입니다. .bin은 실제 에셋이 아니며 LargeImage_60MiB.bmp는 테스트용 실제 이미지입니다.
 
-GitChunk.exe에서 부모 Git 저장소 최상위 폴더 C:/Projects/ResourceSplitter를 선택하고 설치하세요.
+GitChunk.exe에서 부모 Git 저장소 최상위 폴더 C:/Projects/GitChunk를 선택하고 설치하세요.
 TestProject는 하위 폴더이므로 설치 대상으로 지정하지 않습니다.
 
 기본 규칙 *에서는 50 MiB 초과 파일만 분할합니다. 정확히 50 MiB인 파일과 그 이하, .meta는 그대로 저장합니다.
@@ -16,11 +16,11 @@ TestProject는 하위 폴더이므로 설치 대상으로 지정하지 않습니
 로컬에는 실제 원본이 유지됩니다. Git 내부에는 복원 정보와 .gitchunk/objects의 조각이 저장됩니다.
 새 PC에서는 clone 후 한 번 설치하면 원본으로 복원됩니다. 기존 ResourceSplitter 이력도 지원합니다.
 
-예제를 다시 생성하려면 ./Tools/ResourceSplitter/Create-TestProject.ps1 을 실행하세요.
+예제를 다시 생성하려면 ./Tools/GitChunk/Create-TestProject.ps1 을 실행하세요.
 이 명령은 알려진 합성 예제 파일을 덮어쓰므로 필요한 변경은 먼저 보관하세요. expected-sha256.txt는 생성 직후의 해시입니다.
 
 별도 임시 저장소 통합 검증:
-  ./Tools/ResourceSplitter/Test-Git.ps1
-  python Tools/ResourceSplitter/Test-Rules.py GitChunk.exe
+  ./Tools/GitChunk/Test-Git.ps1
+  python Tools/GitChunk/Test-Rules.py GitChunk.exe
 
 이전 수동 복구 CLI는 호환 용도로만 남아 있으며 앱에는 수동 분할/복원 메뉴가 없습니다.
