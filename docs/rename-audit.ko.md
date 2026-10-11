@@ -49,4 +49,9 @@ git push
 
 Windows GUI/CLI 빌드와 새 이름·이전 포인터/저장소/설정/manifest 호환성 테스트를 수행했습니다.
 규칙·clone·과거 이력·GC, 수동 분할·복원, 설치 제거, Git push/pull/checkout/rebase/stash, LFS 전환 회귀 테스트도 통과했습니다.
-macOS의 경로와 테스트 기대값은 갱신했으며, macOS 실행 검증은 수행하지 않았습니다.
+공개 배포 워크플로에서도 Windows와 macOS ARM64/x64의 검사가 모두 통과했습니다.
+`1.2.4` 릴리스와 Windows 설치 파일·포터블 ZIP·macOS ZIP·SHA256SUMS를 발행했고,
+Scoop/Homebrew 패키지 정의도 `1.2.4`로 갱신했습니다.
+
+- 릴리스: https://github.com/MDJ0126/GitChunk/releases/tag/v1.2.4
+- 검증·발행 결과: https://github.com/MDJ0126/GitChunk/actions/runs/38171009881
