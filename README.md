@@ -43,7 +43,7 @@ Edit `.gitchunk/rules.txt` or use the app to choose files. Matching files over *
 
 ## Convert an existing Git LFS project
 
-**Automatic LFS conversion is implemented in the current source and new local build; it is not yet in the public release.** Use the new build for conversion. To run `GitChunk.exe` directly, stay in the target repository root and replace the install command below with the actual executable path followed by `install`.
+**Automatic LFS conversion requires v1.1.0 or later.** v1.0.0 does not include this feature. To run `GitChunk.exe` directly, stay in the target repository root and replace the install command below with the actual executable path followed by `install`.
 
 1. In the target repository root, commit or stash tracked changes first. Downloading missing originals requires Git LFS and remote access.
 2. Run the commands below. Installation obtains missing originals, verifies size and SHA-256, converts LFS attributes and standard hooks, verifies conversion/restoration, and stages the result.
