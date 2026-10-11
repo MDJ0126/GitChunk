@@ -5,7 +5,7 @@ on:
       version:
         description: 'Release version (for example 1.0.0)'
         required: true
-        default: '1.2.1'
+        default: '1.2.2'
 permissions:
   contents: read
 jobs:
@@ -28,6 +28,8 @@ jobs:
           dotnet publish Tools/ResourceSplitter/ResourceSplitter.csproj -c Release -r win-x64 -p:Headless=true -p:Version=$env:GITCHUNK_VERSION -o publish/cli
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           python Tools/ResourceSplitter/Test-Rules.py publish/cli/GitChunk.exe
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python Tools/ResourceSplitter/Test-Uninstall.py publish/cli/GitChunk.exe
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           dotnet publish Tools/ResourceSplitter/ResourceSplitter.csproj -c Release -r win-x64 -p:Version=1.3.0 -o publish/updater-fixture
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
@@ -70,6 +72,7 @@ jobs:
         env:
           GITCHUNK_VERSION: ${{ inputs.version }}
       - run: python3 Tools/ResourceSplitter/Test-Rules.py Tools/ResourceSplitter/bin/mac/${{ matrix.rid }}/GitChunk.app/Contents/MacOS/GitChunk-cli
+      - run: python3 Tools/ResourceSplitter/Test-Uninstall.py Tools/ResourceSplitter/bin/mac/${{ matrix.rid }}/GitChunk.app/Contents/MacOS/GitChunk-cli
       - uses: actions/upload-artifact@v4
         with:
           name: release-${{ matrix.rid }}

@@ -33,6 +33,7 @@
    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
    <StackPanel VerticalAlignment="Center"><TextBlock x:Name="StatusText" Text="Ready" FontWeight="Bold" TextWrapping="Wrap"/><TextBlock Text="Files over 50 MiB → 49 MiB chunks · local originals preserved" TextWrapping="Wrap" Foreground="#64748B" FontSize="11" Margin="0,5,0,0"/><ProgressBar x:Name="Progress" Height="3" Width="180" HorizontalAlignment="Left" Visibility="Collapsed" Margin="0,7,0,0"/></StackPanel>
    <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="12,0,0,0">
+    <Button x:Name="UninstallButton" Content="Uninstall" Click="Uninstall" Margin="0,0,8,0"/>
     <Button Content="Update to latest" Click="UpdateLatest" IsEnabled="{Binding IsEnabled, ElementName=RunButton}" Margin="0,0,8,0"/>
     <Button x:Name="RunButton" Content="Install Git Chunk  →" Click="Execute" Background="#2864EB" Foreground="White" BorderBrush="#2864EB" Padding="16,12" Margin="0" FontWeight="Bold"/>
    </StackPanel>

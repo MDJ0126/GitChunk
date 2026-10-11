@@ -68,6 +68,14 @@ import AppKit
         panel.directoryURL = URL(fileURLWithPath: folder)
         if panel.runModal() == .OK, let url = panel.url { folder = url.path }
     }
+    func uninstall() {
+        guard valid, !busy else { return }
+        busy = true; status = "Uninstalling…"
+        command(["git-uninstall", folder]) { ok, text in
+            self.busy = false; self.status = ok ? "Git Chunk uninstalled" : "Uninstall failed"
+            self.log += text + "\n"; self.loadedFolder = ""; self.refresh()
+        }
+    }
     func saveRules(install: Bool = false, update: Bool = false) {
         guard valid, !busy else { return }; busy = true; status = update ? "Updating…" : install ? "Installing…" : "Saving…"
         let path = folder
@@ -109,6 +117,7 @@ struct ContentView: View {
             HStack {
                 VStack(alignment: .leading) { Text(model.status).fontWeight(.semibold); Text("Files over 50 MiB → 49 MiB chunks · local originals preserved").font(.caption).foregroundStyle(.secondary) }
                 if model.busy { ProgressView().controlSize(.small) }; Spacer()
+                Button("Uninstall") { model.uninstall() }.disabled(model.busy || !model.valid || model.installation == "not-installed")
                 Button("Update to latest") { model.saveRules(update: true) }.disabled(model.busy || !model.valid)
                 Button(model.installation == "installed" ? "Reinstall this version  →" : "Install Git Chunk  →") { model.saveRules(install: true) }.buttonStyle(.borderedProminent).controlSize(.large).disabled(model.busy || !model.valid)
             }

@@ -30,6 +30,7 @@ partial class MainWindow : Window
     {
         RunButton.Content = installation == "installed" ? "Reinstall this version  →" : installation == "legacy" ? "Upgrade to Git Chunk  →" : "Install Git Chunk  →";
         RunButton.IsEnabled = !busy && ValidRepository;
+        UninstallButton.IsEnabled = !busy && installation is "installed" or "incomplete" or "legacy";
         Modes.IsEnabled = !busy && ValidRepository;
         ModeHint.Text = installation switch {
             "installed" => "✓ Installed · Running Git Chunk " + ToolUpdate.Current.ToString(3) + ". Use Update to latest for a newer release.",
@@ -102,6 +103,19 @@ partial class MainWindow : Window
         } catch (Exception ex) { StatusText.Text = "Update failed"; Append(ex.Message); }
         finally { busy = false; FolderPath.IsEnabled = BrowseButton.IsEnabled = true; Progress.IsIndeterminate = false; Progress.Visibility = Visibility.Collapsed; await RefreshInstallation(); }
     }
+    async void Uninstall(object sender, RoutedEventArgs e) => await RemoveInstallation();
+    async Task RemoveInstallation()
+    {
+        if (busy) return;
+        try {
+            await RefreshInstallation(); if (!ValidRepository) throw new Exception("Select the repository root.");
+            busy = true; ApplyState(); FolderPath.IsEnabled = BrowseButton.IsEnabled = false;
+            Progress.Visibility = Visibility.Visible; Progress.IsIndeterminate = true; StatusText.Text = "Uninstalling…";
+            await Command("git-uninstall", Root(), true);
+            dirty = false; loadedRoot = ""; StatusText.Text = "Git Chunk uninstalled";
+        } catch (Exception ex) { StatusText.Text = "Uninstall failed"; Append(ex.Message); }
+        finally { busy = false; FolderPath.IsEnabled = BrowseButton.IsEnabled = true; Progress.IsIndeterminate = false; Progress.Visibility = Visibility.Collapsed; await RefreshInstallation(); }
+    }
     async Task Install()
     {
         if (busy) return;
@@ -119,7 +133,7 @@ partial class MainWindow : Window
     void CopyLog(object sender, RoutedEventArgs e) { try { Clipboard.SetText(Log.Text); } catch (Exception ex) { Append(ex.Message); } }
     void OnDragOver(object sender, DragEventArgs e) { e.Effects = !busy && e.Data.GetDataPresent(DataFormats.FileDrop) ? DragDropEffects.Copy : DragDropEffects.None; e.Handled = true; }
     void OnDrop(object sender, DragEventArgs e) { if (!busy && e.Data.GetData(DataFormats.FileDrop) is string[] paths && paths.Length == 1 && Directory.Exists(paths[0])) FolderPath.Text = paths[0]; e.Handled = true; }
-    void OnClosing(object? sender, CancelEventArgs e) { if (busy) { e.Cancel = true; StatusText.Text = "Wait for installation to finish before closing."; } else if (dirty && MessageBox.Show(this, "Discard unsaved rules and close?", "Git Chunk", MessageBoxButton.YesNo) != MessageBoxResult.Yes) e.Cancel = true; }
+    void OnClosing(object? sender, CancelEventArgs e) { if (busy) { e.Cancel = true; StatusText.Text = "Wait for the current operation to finish before closing."; } else if (dirty && MessageBox.Show(this, "Discard unsaved rules and close?", "Git Chunk", MessageBoxButton.YesNo) != MessageBoxResult.Yes) e.Cancel = true; }
     internal static int Preview(string path)
     {
         RenderOptions.ProcessRenderMode = RenderMode.SoftwareOnly;
@@ -142,7 +156,9 @@ partial class MainWindow : Window
             await window.Install(); if (window.installation != "installed") throw new Exception("Install state failed: " + window.Log.Text);
             var reopened = new MainWindow(); reopened.FolderPath.Text = root; await reopened.RefreshInstallation();
             if (reopened.installation != "installed" || reopened.RulesEditor.Text != window.RulesEditor.Text) throw new Exception("Reopen persistence failed.");
-            Console.WriteLine("PASS: GUI install, rules, reopen status and persistence."); window.dirty = false; reopened.dirty = false; app.Shutdown(0);
+            await window.RemoveInstallation();
+            if (window.installation != "not-installed" || Directory.Exists(Path.Combine(root, ".gitchunk")) || File.Exists(ChunkIgnore.IgnorePath(root))) throw new Exception("GUI uninstall failed: " + window.Log.Text);
+            Console.WriteLine("PASS: GUI install, ignore list persistence and uninstall."); window.dirty = false; reopened.dirty = false; app.Shutdown(0);
         } catch (Exception ex) { window.dirty = false; Console.Error.WriteLine(ex); app.Shutdown(1); } }; return app.Run(window);
     }
 }

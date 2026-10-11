@@ -544,6 +544,7 @@ static partial class GitIntegration
             case "git-rules-match": Console.WriteLine(ChunkIgnore.Matches(args[1], args[2]) ? "include" : "exclude"); break;
             case "git-status": InstallationStatus(args.Length > 1 ? args[1] : Directory.GetCurrentDirectory()); break;
             case "git-install": Install(args.Length > 1 ? args[1] : Directory.GetCurrentDirectory()); Console.WriteLine("Applied Git Chunk " + ToolUpdate.VersionText + " from " + Environment.ProcessPath); ToolUpdate.Check(); break;
+            case "git-uninstall": Uninstall(args.Length > 1 ? args[1] : Directory.GetCurrentDirectory()); break;
             case "git-clean": Clean(args.Length > 1 ? args[1] : null); break;
             case "git-smudge": Smudge(Console.OpenStandardInput(), Console.OpenStandardOutput()); break;
             case "git-prepare": Prepare(); break;
