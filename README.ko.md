@@ -61,4 +61,10 @@ git push
 
 **과거 커밋과 서버의 기존 LFS 객체·저장 용량은 자동 정리하지 않습니다.** 과거 LFS 버전을 사용하려면 Git LFS와 해당 원본을 유지해야 합니다.
 
+서버 LFS 용량을 정리하려면 먼저 전환한 프로젝트를 업로드하고 복원을 검증합니다. 최신 버전만 필요하다면 기존 저장소를 백업한 뒤, 검증된 최신 파일 트리로 부모 없는 새 커밋을 만들어 공개 브랜치를 교체할 수 있습니다. 이 경우 해당 브랜치에서 예전 커밋으로 되돌아갈 수 없습니다. 삭제 요청 전 모든 원격 브랜치와 태그에 LFS 참조가 남아 있는지 확인해야 합니다. Git bundle에는 Git 이력만 들어가고 LFS 원본 데이터는 포함되지 않으므로, 필요한 LFS 원본은 별도로 백업합니다.
+
+기존 이력을 제거하기 **전에** `git lfs ls-files --all --long`으로 과거 LFS 객체 ID와 경로를 저장합니다. 이 목록은 확보한 Git 이력이 참조하는 객체이며, 서버 전체 객체 목록이나 실제 청구 용량을 뜻하지 않습니다. 저장소 주소·기존 객체 ID·검증된 새 커밋 ID를 첨부하여 [GitHub 지원팀](https://support.github.com/)에 삭제를 요청합니다. GitChunk는 원격 LFS 객체를 삭제하지 않습니다. [GitHub 공식 문서도 파일 전환 후 서버 객체가 삭제될 때까지 LFS 용량에 포함된다고 안내합니다](https://docs.github.com/en/repositories/working-with-files/managing-large-files/removing-files-from-git-large-file-storage).
+
+v1.1.1에서는 LFS 전환 중 이미 일반 Git으로 추적하던 대용량 파일도 조각화하고, LFS 포인터 검색을 일괄 처리합니다. LFS 리소스와 대용량 빌드 파일이 함께 있는 프로젝트도 처리합니다.
+
 [배포 상세](Packaging/README.md) · [기술 설명](INSTRUCTIONS.md)

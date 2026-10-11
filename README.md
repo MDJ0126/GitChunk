@@ -61,4 +61,10 @@ Current LFS files **over 50 MiB** become chunks; files at or below that size bec
 
 **Past commits and existing server LFS objects/storage usage are preserved.** Keep Git LFS and the corresponding originals to use historical LFS versions.
 
+To reclaim server LFS storage, first upload and verify the converted project. If you only need the latest version, back up the old repository and publish a new root commit containing the verified latest tree; this removes the old history from the published branch. Check every remote branch and tag for remaining LFS references before requesting deletion. A Git bundle backs up Git history, but does not contain LFS payloads; back those up separately if needed.
+
+Save `git lfs ls-files --all --long` **before** removing the old history to obtain the historical object IDs and paths. This lists objects referenced by available Git history, not a server inventory or billing total. Submit the repository URLs, old object IDs and verified new commit IDs through [GitHub Support](https://support.github.com/). GitChunk does not delete remote LFS objects. [GitHub documents that removed LFS objects continue to consume storage until purged](https://docs.github.com/en/repositories/working-with-files/managing-large-files/removing-files-from-git-large-file-storage).
+
+v1.1.1 also converts existing large ordinary Git files during LFS migration and batches LFS pointer discovery. This covers mixed repositories containing both LFS resources and large build files.
+
 [Distribution details](Packaging/README.md) · [Technical notes](INSTRUCTIONS.md)
