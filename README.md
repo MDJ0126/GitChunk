@@ -43,7 +43,7 @@ git commit -m "Configure Git Chunk"
 
 Then use Git as usual. The app also supports setup: select your project and click **Install Git Chunk**.
 
-Edit `.gitchunk/rules.txt` or use the app to choose files. Matching files over **50 MiB** become chunks of up to **49 MiB**. Do not delete `.gitchunk/objects`.
+Files over **50 MiB** become chunks of up to **49 MiB** by default. Add paths to the repository-root `.chunkignore` to store matching files whole, or edit the ignore list in the app. For example, `Build/**` excludes every file under Build from chunking. An empty ignore list excludes nothing. Do not delete `.gitchunk/objects`.
 
 ## Convert an existing Git LFS project
 
@@ -59,7 +59,7 @@ git commit -m "Convert current LFS files to Git Chunk"
 git push
 ```
 
-Current LFS files **over 50 MiB** become chunks; files at or below that size become ordinary Git files. Large LFS files excluded by chunk rules or custom commit/push hooks stop conversion with instructions. Installation never commits or pushes automatically. Failed conversion restores the original index, settings and hooks.
+Current LFS files **over 50 MiB** become chunks; files at or below that size become ordinary Git files. Large LFS files excluded by `.chunkignore` or custom commit/push hooks stop conversion with instructions. Installation never commits or pushes automatically. Failed conversion restores the original index, settings and hooks.
 
 **After conversion, edit originals and use add/commit/push as usual.** Adding files chunks them automatically; the commit hook includes required chunks. Pull/checkout restores originals automatically. On a new computer, clone and run `git chunk install` once.
 
@@ -74,3 +74,5 @@ v1.1.1 also converts existing large ordinary Git files during LFS migration and 
 [Distribution details](Packaging/README.md) · [Technical notes](INSTRUCTIONS.md)
 
 `.gitchunk/chunks.txt` lists original paths (JSON strings) and ordered chunk IDs. Installation rebuilds it from existing indexed pointers; the commit hook refreshes and stages it from staged files, including renames and deletions. Restoration still uses the original pointers. Updates archive old presets under the Git metadata directory.
+
+`.chunkignore` supports one pattern per line, `#` comments, `*`, `**`, `?`, a leading `/` for root paths, and a trailing `/` for directory contents. Plain patterns exclude files from chunking; `!` can re-enable a matching file (last match wins). This affects chunking only; excluded files are still tracked by Git. It does not implement every `.gitignore` syntax feature. Existing `.gitchunk/rules.txt` settings are converted while preserving their selection and backed up under Git metadata as `gitchunk/rules-backup-*.txt`; the old settings file is removed.

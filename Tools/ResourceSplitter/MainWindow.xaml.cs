@@ -70,15 +70,15 @@ partial class MainWindow : Window
     }
     void LoadRules(string root)
     {
-        loading = true; try { RulesEditor.Text = ChunkRules.Load(root); dirty = false; } finally { loading = false; }
+        loading = true; try { RulesEditor.Text = ChunkIgnore.Load(root); dirty = false; } finally { loading = false; }
     }
-    void RulesChanged(object sender, System.Windows.Controls.TextChangedEventArgs e) { if (!loading && StatusText != null) { dirty = true; StatusText.Text = "Rules changed · not saved yet"; } }
+    void RulesChanged(object sender, System.Windows.Controls.TextChangedEventArgs e) { if (!loading && StatusText != null) { dirty = true; StatusText.Text = "Ignore list changed · not saved yet"; } }
     void StoreRules()
     {
         if (!ValidRepository || !Root().Equals(loadedRoot, FileSystemPaths.Comparison)) throw new Exception("Wait for repository validation before saving.");
-        ChunkRules.EnsureDefaults(Root()); ChunkRules.Save(Root(), RulesEditor.Text); dirty = false;
-        StatusText.Text = "Rules saved";
-        Append("Saved .gitchunk/rules.txt. Run git add --renormalize . to apply the policy to existing tracked files.");
+        ChunkIgnore.EnsureDefaults(Root()); ChunkIgnore.Save(Root(), RulesEditor.Text); dirty = false;
+        StatusText.Text = "Ignore list saved";
+        Append("Saved .chunkignore. Run git add --renormalize . to apply the policy to existing tracked files.");
     }
     void SaveRules(object sender, RoutedEventArgs e) { try { StoreRules(); } catch (Exception ex) { Append(ex.Message); } }
     async void Browse(object sender, RoutedEventArgs e)
@@ -137,8 +137,8 @@ partial class MainWindow : Window
         window.Loaded += async (_, _) => { try {
             window.FolderPath.Text = root; await window.RefreshInstallation();
             if (window.installation != "not-installed") throw new Exception("Expected fresh repository.");
-            window.RulesEditor.Text = "Assets/**\n!Assets/Small/**\n"; window.StoreRules();
-            if (Directory.Exists(ChunkRules.PathFor(root, "presets"))) throw new Exception("Unexpected presets.");
+            window.RulesEditor.Text = "Assets/Small/**\n"; window.StoreRules();
+            if (Directory.Exists(ChunkIgnore.PathFor(root, "presets"))) throw new Exception("Unexpected presets.");
             await window.Install(); if (window.installation != "installed") throw new Exception("Install state failed: " + window.Log.Text);
             var reopened = new MainWindow(); reopened.FolderPath.Text = root; await reopened.RefreshInstallation();
             if (reopened.installation != "installed" || reopened.RulesEditor.Text != window.RulesEditor.Text) throw new Exception("Reopen persistence failed.");

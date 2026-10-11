@@ -66,7 +66,7 @@ try {
     Remove-Item .git/hooks/pre-push
     G lfs install --local
     New-Item -ItemType Directory .gitchunk -Force | Out-Null
-    Set-Content .gitchunk/rules.txt '!*.bin'
+    Set-Content .chunkignore '*.bin'
     $attrsBefore = Get-Content .gitattributes -Raw
     $hookBefore = Get-Content .git/hooks/pre-push -Raw
     & $exe git-install "$PWD" | Out-Host

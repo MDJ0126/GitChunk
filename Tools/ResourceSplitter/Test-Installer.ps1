@@ -14,8 +14,8 @@ try {
     $env:Path = $bin + ';' + $oldPath
     $state = & git -C $repo chunk status
     if ($LASTEXITCODE -ne 0 -or $state -ne 'installed') { throw "External git command failed: $state" }
-    $rules = & git -C $repo chunk rules
-    if ($LASTEXITCODE -ne 0 -or ($rules -join "`n") -notmatch 'Only matching files') { throw 'Rules CLI failed.' }
+    $rules = & git -C $repo chunk ignore
+    if ($LASTEXITCODE -ne 0 -or ($rules -join "`n") -notmatch 'Files matching these patterns') { throw 'Rules CLI failed.' }
     & git -C $repo chunk install
     if ($LASTEXITCODE -ne 0) { throw 'CLI reinstall failed.' }
     Write-Host 'PASS: source installer, headless build, git chunk dispatch, spaced paths, rules, reinstall, unchanged user PATH'

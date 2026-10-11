@@ -31,16 +31,25 @@ with tempfile.TemporaryDirectory(prefix='GitChunk-rules-') as temp:
         assert b'.resourcesplitter/objects/' in run(root, 'git', 'ls-tree', '-r', '--name-only', 'HEAD')
         assert run(root, tool, 'git-status', str(root)).strip() == b'legacy'
         (root / '.resourcesplitter/user-note.txt').write_text('retain unknown legacy files', encoding='utf-8')
+    (root / '.gitchunk').mkdir(exist_ok=True)
+    legacy_policy = b'Assets/**\n!Assets/Small/**\n'
+    (root / '.gitchunk/rules.txt').write_bytes(legacy_policy)
     run(root, tool, 'git-install', str(root))
+    assert not (root / '.gitchunk/rules.txt').exists()
+    assert any(p.read_bytes() == legacy_policy for p in (root / '.git/gitchunk').glob('rules-backup-*.txt'))
+    for name, match in [('Assets/large.bin', b'include'), ('Assets/Small/raw.bin', b'exclude'), ('Build/game.zip', b'exclude')]:
+        assert run(root, tool, 'git-ignore-match', str(root), name).strip() == match
     if legacy:
         assert not (root / '.resourcesplitter').exists()
         backups = list((root / '.git/gitchunk').glob('legacy-storage-*'))
         assert backups and (backups[0] / 'user-note.txt').read_text() == 'retain unknown legacy files'
-    policy = '# 커스텀 Unicode policy\nAssets/**/*.bmp\n*.wav\n!Assets/Small/**\n'.encode('utf-8')
+    policy = '# 커스텀 Unicode policy\nAssets/Small/**\nOther/**\nBuild/**\n'.encode('utf-8')
     run(root, tool, 'git-rules-save', str(root), data=policy)
     assert not (root / '.gitchunk/presets').exists()
-    for name, expected_match in [('Assets/picture.bmp','include'), ('Assets/deep/picture.bmp','include'), ('Assets/Small/picture.bmp','exclude'), ('other/picture.bmp','exclude'), ('sound.wav','include'), ('.gitchunk/test.wav','exclude'), ('Assets/picture.bmp.meta','exclude')]:
+    for name, expected_match in [('Assets/picture.bmp','include'), ('Assets/deep/picture.bmp','include'), ('Assets/Small/picture.bmp','exclude'), ('Unlisted/picture.bmp','include'), ('sound.wav','include'), ('Build/game.zip','exclude'), ('Build/nested/game.apk','exclude'), ('.chunkignore','exclude'), ('.gitchunk/test.wav','exclude'), ('Assets/picture.bmp.meta','exclude')]:
         assert run(root, tool, 'git-rules-match', str(root), name).strip().decode() == expected_match, name
+    assert (root / '.chunkignore').read_bytes() == policy
+    assert run(root, 'git', 'check-attr', 'filter', '--', '.chunkignore').strip().endswith(b'filter: unset')
     excluded = root / 'Assets' / 'Small' / 'skip.bmp'; large(excluded)
     other = root / 'Other' / 'raw.bin'; large(other)
     run(root, 'git', 'add', '-u')
@@ -92,7 +101,7 @@ with tempfile.TemporaryDirectory(prefix='GitChunk-rules-') as temp:
         data = run(reader, 'git', 'cat-file', '--filters', old_commit + ':Assets/한글 picture.bmp')
         assert hashlib.sha256(data).hexdigest() == expected
     # Policy change leaves an existing pointer restorable and stores the next add raw.
-    run(reader, tool, 'git-rules-save', str(reader), data=b'!**\n')
+    run(reader, tool, 'git-rules-save', str(reader), data=b'**\n')
     run(reader, 'git', 'add', '--renormalize', 'Assets/한글 picture.bmp')
     assert run(reader, 'git', 'cat-file', '-s', ':Assets/한글 picture.bmp').strip() == b'62914560'
     run(reader, tool, 'git-prepare')

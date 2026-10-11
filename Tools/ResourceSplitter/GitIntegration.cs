@@ -107,7 +107,7 @@ static partial class GitIntegration
             Console.OpenStandardInput().CopyTo(file);
             file.Position = 0;
             var output = Console.OpenStandardOutput();
-            if (file.Length <= Threshold || (relative != null && !ChunkRules.Matches(Text("rev-parse", "--show-toplevel"), relative)))
+            if (file.Length <= Threshold || (relative != null && !ChunkIgnore.Matches(Text("rev-parse", "--show-toplevel"), relative)))
             {
                 // Reject malformed reserved pointers instead of silently accepting them.
                 if (file.Length <= 1024 * 1024) { var b = new byte[(int)file.Length]; file.ReadExactly(b);
@@ -309,7 +309,7 @@ static partial class GitIntegration
             var fields = item.Split(' ');
             if (fields.Length != 3 || fields[1] != "blob") throw new Exception("Invalid staged blob.");
             var size = long.Parse(fields[2]);
-            if (size >= 100L * 1024 * 1024 || (size > Threshold && candidates[fields[0]].Any(path => !ToolPath(path) && ChunkRules.Matches(Text("rev-parse", "--show-toplevel"), path))))
+            if (size >= 100L * 1024 * 1024 || (size > Threshold && candidates[fields[0]].Any(path => !ToolPath(path) && ChunkIgnore.Matches(Text("rev-parse", "--show-toplevel"), path))))
                 throw new Exception("Large raw blob is staged: " + string.Join(", ", candidates[fields[0]]) + ". Check attributes and run git add again.");
             if (size <= 1024 * 1024) small.Add(fields[0]);
         }
@@ -357,7 +357,7 @@ static partial class GitIntegration
             for (int i = 0; i < file.Pointer.Chunks.Count; i++)
                 text.Append((i + 1).ToString("D6")).Append(" = ").Append(file.Pointer.Chunks[i].Oid).Append('\n');
         }
-        var target = ChunkRules.PathFor(root, "chunks.txt");
+        var target = ChunkIgnore.PathFor(root, "chunks.txt");
         Directory.CreateDirectory(Path.GetDirectoryName(target)!);
         var temporary = target + ".tmp-" + Guid.NewGuid().ToString("N");
         try { File.WriteAllText(temporary, text.ToString(), new UTF8Encoding(false)); File.Move(temporary, target, true); }
@@ -425,7 +425,7 @@ static partial class GitIntegration
         var tool = Path.Combine(actual, ".gitchunk", InstalledToolName);
         if (Directory.Exists(Path.GetDirectoryName(tool)) && (File.GetAttributes(Path.GetDirectoryName(tool)!) & FileAttributes.ReparsePoint) != 0) throw new Exception("Tool directory cannot be a symbolic link/junction.");
         Directory.CreateDirectory(Path.GetDirectoryName(tool)!);
-        ChunkRules.EnsureDefaults(actual);
+        ChunkIgnore.EnsureDefaults(actual);
         var source = Environment.ProcessPath ?? throw new Exception("Executable path unavailable.");
         if (!source.Equals(tool, FileSystemPaths.Comparison)) File.Copy(source, tool, true);
         if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(tool, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute | UnixFileMode.GroupRead | UnixFileMode.GroupExecute | UnixFileMode.OtherRead | UnixFileMode.OtherExecute);
@@ -447,10 +447,12 @@ static partial class GitIntegration
         var attributes = Path.Combine(actual, ".gitattributes");
         var old = File.Exists(attributes) ? File.ReadAllText(attributes) : "";
         if (!old.Contains("# GitChunk automatic storage")) File.AppendAllText(attributes,
-            "\n# GitChunk automatic storage\n* filter=gitchunk -text\n*.meta -filter\n.gitattributes -filter\n.gitignore -filter\n.gitchunk/** -filter -text -diff -merge\n.gitchunk/rules.txt -filter text eol=lf diff\n.gitchunk/chunks.txt -filter text eol=lf diff\n.resourcesplitter/** -filter -text -diff -merge\nGitChunk.* -filter\nResourceSplitter.* -filter\nTools/ResourceSplitter/** -filter\n", new UTF8Encoding(false));
+            "\n# GitChunk automatic storage\n* filter=gitchunk -text\n*.meta -filter\n.gitattributes -filter\n.gitignore -filter\n.gitchunk/** -filter -text -diff -merge\n.chunkignore -filter text eol=lf diff\n.gitchunk/chunks.txt -filter text eol=lf diff\n.resourcesplitter/** -filter -text -diff -merge\nGitChunk.* -filter\nResourceSplitter.* -filter\nTools/ResourceSplitter/** -filter\n", new UTF8Encoding(false));
         else
         {
             var updated = old.Replace("\r\n", "\n");
+            updated = Regex.Replace(updated, @"(?m)^\.gitchunk/rules\.txt -filter text eol=lf diff\n?", "");
+            if (!updated.Contains(".chunkignore -filter text eol=lf diff")) updated = updated.TrimEnd('\n') + "\n.chunkignore -filter text eol=lf diff\n";
             updated = Regex.Replace(updated, @"(?m)^\.gitchunk/presets/\*\* -filter text eol=lf diff\n?", "");
             if (!updated.Contains(".gitchunk/chunks.txt -filter text eol=lf diff"))
                 updated = updated.TrimEnd('\n') + "\n.gitchunk/chunks.txt -filter text eol=lf diff\n";
@@ -503,7 +505,7 @@ static partial class GitIntegration
         }
         MigrateLegacyStorage(actual);
         RefreshChunkList(actual);
-        var presets = ChunkRules.PathFor(actual, "presets");
+        var presets = ChunkIgnore.PathFor(actual, "presets");
         if (Directory.Exists(presets)) {
             var backup = Path.Combine(Text("rev-parse", "--absolute-git-dir"), "gitchunk", "presets-backup-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(Path.GetDirectoryName(backup)!);
@@ -527,16 +529,19 @@ static partial class GitIntegration
         var runtime = RuntimeTool();
         var attributes = Path.Combine(actual, ".gitattributes");
         bool Hook(string name, string command) => File.Exists(Path.Combine(hooks, name)) && File.ReadAllText(Path.Combine(hooks, name)).Replace("\r\n", "\n") == "#!/bin/sh\n# GitChunk managed hook\nexec " + Quote(runtime) + " " + command + "\n";
-        var installed = File.Exists(runtime) && clean == Quote(runtime) + " git-clean %f" && smudge == Quote(runtime) + " git-smudge" && Config("filter.gitchunk.required") == "true" && Hook("pre-commit", "git-prepare") && Hook("pre-push", "git-check-push") && File.Exists(attributes) && File.ReadAllText(attributes).Contains("# GitChunk automatic storage") && File.Exists(ChunkRules.PathFor(actual, "rules.txt"));
+        var installed = File.Exists(runtime) && clean == Quote(runtime) + " git-clean %f" && smudge == Quote(runtime) + " git-smudge" && Config("filter.gitchunk.required") == "true" && Hook("pre-commit", "git-prepare") && Hook("pre-push", "git-check-push") && File.Exists(attributes) && File.ReadAllText(attributes).Contains("# GitChunk automatic storage") && File.Exists(ChunkIgnore.IgnorePath(actual));
         Console.WriteLine(installed ? "installed" : clean.Length > 0 || smudge.Length > 0 ? "incomplete" : Config("filter.resourcesplitter.clean").Length > 0 ? "legacy" : "not-installed");
     }
     public static int Run(string[] args)
     {
         switch (args[0])
         {
-            case "git-rules-read": Console.Write(ChunkRules.Load(args[1])); break;
-            case "git-rules-save": ChunkRules.Save(args[1], Console.In.ReadToEnd()); break;
-            case "git-rules-match": Console.WriteLine(ChunkRules.Matches(args[1], args[2]) ? "include" : "exclude"); break;
+            case "git-ignore-read":
+            case "git-rules-read": Console.Write(ChunkIgnore.Load(args[1])); break;
+            case "git-ignore-save":
+            case "git-rules-save": ChunkIgnore.Save(args[1], Console.In.ReadToEnd()); break;
+            case "git-ignore-match":
+            case "git-rules-match": Console.WriteLine(ChunkIgnore.Matches(args[1], args[2]) ? "include" : "exclude"); break;
             case "git-status": InstallationStatus(args.Length > 1 ? args[1] : Directory.GetCurrentDirectory()); break;
             case "git-install": Install(args.Length > 1 ? args[1] : Directory.GetCurrentDirectory()); Console.WriteLine("Applied Git Chunk " + ToolUpdate.VersionText + " from " + Environment.ProcessPath); ToolUpdate.Check(); break;
             case "git-clean": Clean(args.Length > 1 ? args[1] : null); break;

@@ -31,7 +31,10 @@ with tempfile.TemporaryDirectory(prefix='GitChunk-update-') as temp:
     pointer = run(root, 'git', 'show', 'HEAD:기존 파일.bin')
     policy = (root / '.gitchunk/rules.txt').read_bytes()
     run(root, new, 'git-install', str(root))
-    assert (root / '.gitchunk/rules.txt').read_bytes() == policy
+    assert not (root / '.gitchunk/rules.txt').exists()
+    assert (root / '.chunkignore').exists()
+    assert any(p.read_bytes() == policy for p in (root / '.git/gitchunk').glob('rules-backup-*.txt'))
+    assert run(root, new, 'git-ignore-match', str(root), 'Build/game.zip').strip() == b'include'
     assert not (root / '.gitchunk/presets').exists()
     attributes = (root / '.gitattributes').read_text()
     assert '.gitchunk/presets/**' not in attributes

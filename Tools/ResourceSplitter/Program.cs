@@ -278,11 +278,11 @@ class Program
             catch (Exception ex) { Console.Error.WriteLine("ERROR: Update failed: " + ex.Message); return 1; }
         }
         if (args.Length == 0 || args[0] is "-h" or "--help") {
-            Console.WriteLine("Git Chunk " + ToolUpdate.VersionText + "\ngit chunk install [repository-root] (apply this version)\ngit chunk update [repository-root] (download latest and apply)\ngit chunk version\ngit chunk status [repository-root]\ngit chunk rules [repository-root]\nConfiguration: .gitchunk/rules.txt");
+            Console.WriteLine("Git Chunk " + ToolUpdate.VersionText + "\ngit chunk install [repository-root] (apply this version)\ngit chunk update [repository-root] (download latest and apply)\ngit chunk version\ngit chunk status [repository-root]\ngit chunk ignore [repository-root]\nConfiguration: .chunkignore");
             return 0;
         }
-        if (args[0] is "install" or "status" or "rules") {
-            args[0] = args[0] switch { "install" => "git-install", "status" => "git-status", _ => "git-rules-read" };
+        if (args[0] is "install" or "status" or "ignore" or "rules") {
+            args[0] = args[0] switch { "install" => "git-install", "status" => "git-status", _ => "git-ignore-read" };
             if (args.Length == 1) args = new[] { args[0], Directory.GetCurrentDirectory() };
         }
         try

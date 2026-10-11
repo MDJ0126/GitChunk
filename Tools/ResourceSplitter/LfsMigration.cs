@@ -142,7 +142,7 @@ static partial class GitIntegration
             {
                 var attr = Text("check-attr", "filter", "--", asset.Path);
                 if (!attr.EndsWith(": gitchunk")) throw new Exception("A nested or local attribute overrides GitChunk: " + asset.Path + ". Adjust that attribute and retry.");
-                if (asset.Size > Threshold && !ChunkRules.Matches(actual, asset.Path)) throw new Exception("LFS file excluded by chunk rules: " + asset.Path + ". Include it and retry.");
+                if (asset.Size > Threshold && !ChunkIgnore.Matches(actual, asset.Path)) throw new Exception("LFS file excluded by .chunkignore: " + asset.Path + ". Remove its ignore pattern and retry.");
                 Text("add", "--renormalize", "--", asset.Path);
                 var staged = Git(null, "show", ":" + asset.Path);
                 if (asset.Size > Threshold)
@@ -157,7 +157,7 @@ static partial class GitIntegration
                 else if (!Hash(staged).Equals(asset.Oid, StringComparison.OrdinalIgnoreCase)) throw new Exception("Converted original hash mismatch: " + asset.Path);
             }
             int ordinaryLarge = 0;
-            foreach (var entry in IndexedAssets().Where(e => e.Size > Threshold && !ToolPath(e.Path) && ChunkRules.Matches(actual, e.Path)))
+            foreach (var entry in IndexedAssets().Where(e => e.Size > Threshold && !ToolPath(e.Path) && ChunkIgnore.Matches(actual, e.Path)))
             {
                 var path = SafePath(actual, entry.Path);
                 if (Text("hash-object", "--no-filters", "--", path) != entry.Oid) throw new Exception("Existing large Git file differs from its indexed original: " + entry.Path);
@@ -173,7 +173,7 @@ static partial class GitIntegration
             Prepare();
             if (ordinaryLarge > 0) Console.WriteLine($"Converted and verified {ordinaryLarge} existing large ordinary Git files.");
             foreach (var path in attributeFiles) Text("add", "--", Path.GetRelativePath(actual, path));
-            Text("add", "--", ".gitattributes", ".gitignore", ".gitchunk/rules.txt", ".gitchunk/chunks.txt");
+            Text("add", "--", ".gitattributes", ".gitignore", ".chunkignore", ".gitchunk/chunks.txt");
             Console.WriteLine($"Converted and verified {assets.Count} current LFS files. Review git diff --cached, then commit and push. No commit or push was performed. Past commits and server LFS storage remain unchanged. Backup: {metadata}");
         }
         catch
