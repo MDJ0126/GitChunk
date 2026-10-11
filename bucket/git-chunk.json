@@ -1,11 +1,11 @@
 {
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Git-native chunk storage for large files",
   "homepage": "https://github.com/MDJ0126/GitChunk",
   "architecture": {
     "64bit": {
-      "url": "https://github.com/MDJ0126/GitChunk/releases/download/v1.1.0/GitChunk-Windows-x64.zip",
-      "hash": "5a3a85b330f12f26c386f10b6147ab695d60b61837478a78f9f93fdfb2f641fc"
+      "url": "https://github.com/MDJ0126/GitChunk/releases/download/v1.1.1/GitChunk-Windows-x64.zip",
+      "hash": "385814a1bed9b152fee58db058b34a1adf82335d4dbd91fc91e74450712b20d9"
     }
   },
   "bin": [
