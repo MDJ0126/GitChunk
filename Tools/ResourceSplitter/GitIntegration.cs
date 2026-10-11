@@ -112,7 +112,108 @@ static class GitIntegration
         }
         finally { if (File.Exists(temp)) File.Delete(temp); }
     }
-    static void Smudge(Stream source, Stream destination)
+    static string BlobId(byte[] data, bool sha256)
+    {
+        var header = Encoding.ASCII.GetBytes("blob " + data.Length + "\0");
+        using var hash = IncrementalHash.CreateHash(sha256 ? HashAlgorithmName.SHA256 : HashAlgorithmName.SHA1);
+        hash.AppendData(header); hash.AppendData(data);
+        return Convert.ToHexString(hash.GetHashAndReset()).ToLowerInvariant();
+    }
+    static string SafePath(string root, string relative)
+    {
+        var path = Path.GetFullPath(Path.Combine(root, relative));
+        if (!path.StartsWith(Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)) throw new Exception("Path outside project.");
+        for (var current = path; current != null && current.Length >= Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar).Length; current = Path.GetDirectoryName(current))
+        {
+            if ((File.Exists(current) || Directory.Exists(current)) && (File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0) throw new Exception("Symbolic link/junction is not supported: " + current);
+        }
+        return path;
+    }
+    public static void ManualSplit(string root, IEnumerable<string> files, int chunkSize)
+    {
+        var storeRoot = StorageRoot(root);
+        bool sha256 = false;
+        try { sha256 = Text("-C", storeRoot, "rev-parse", "--show-object-format") == "sha256"; } catch { /* Standalone folders do not require Git. */ }
+        int count = 0;
+        foreach (var original in files.ToList())
+        {
+            if (new FileInfo(original).Length <= Threshold) continue;
+            var path = SafePath(root, Path.GetRelativePath(root, original));
+            var chunks = new List<Chunk>();
+            using var fullHash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+            long size;
+            using (var input = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+            {
+                size = input.Length;
+                while (input.Position < size)
+                {
+                    var bytes = new byte[(int)Math.Min(chunkSize, size - input.Position)]; input.ReadExactly(bytes);
+                    fullHash.AppendData(bytes);
+                    var oid = BlobId(bytes, sha256); var hash = Hash(bytes);
+                    var partPath = SafePath(storeRoot, Store + oid); Directory.CreateDirectory(Path.GetDirectoryName(partPath)!);
+                    if (File.Exists(partPath))
+                    {
+                        var existing = File.ReadAllBytes(partPath);
+                        if (existing.Length != bytes.Length || Hash(existing) != hash) throw new Exception("Corrupt existing chunk: " + oid);
+                    }
+                    else
+                    {
+                        var temp = partPath + ".tmp-" + Guid.NewGuid().ToString("N");
+                        try { File.WriteAllBytes(temp, bytes); File.Move(temp, partPath); }
+                        finally { if (File.Exists(temp)) File.Delete(temp); }
+                    }
+                    if (Hash(File.ReadAllBytes(partPath)) != hash) throw new Exception("Saved chunk verification failed.");
+                    chunks.Add(new Chunk(oid, bytes.Length, hash));
+                }
+            }
+            var pointer = new Pointer(size, Convert.ToHexString(fullHash.GetHashAndReset()), chunks);
+            var temporary = path + ".restore-" + Guid.NewGuid().ToString("N");
+            try
+            {
+                File.WriteAllBytes(temporary, Encoding.UTF8.GetBytes(Prefix + JsonSerializer.Serialize(pointer) + "\n"));
+                using (var verify = File.OpenRead(path))
+                    if (verify.Length != size || Convert.ToHexString(SHA256.HashData(verify)) != pointer.Sha256) throw new Exception("Original changed during splitting: " + path);
+                File.Move(temporary, path, true); count++;
+                Console.WriteLine("Pointer saved: " + Path.GetRelativePath(root, path));
+            }
+            finally { if (File.Exists(temporary)) File.Delete(temporary); }
+        }
+        Console.WriteLine($"Split complete: {count} files. Metadata unchanged; chunks retained in {Store}.");
+    }
+    static IEnumerable<string> PointerFiles(string root, string directory)
+    {
+        foreach (var path in Directory.EnumerateFileSystemEntries(directory))
+        {
+            if (new[] { ".git", ".svn", ".hg", ".resourcesplitter", "ResourceParts" }.Contains(Path.GetFileName(path), StringComparer.OrdinalIgnoreCase)) continue;
+            if ((File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0) continue;
+            if (Directory.Exists(path)) { foreach (var file in PointerFiles(root, path)) yield return file; }
+            else if (new FileInfo(path).Length <= 1024 * 1024 && Parse(File.ReadAllBytes(path)) != null) yield return SafePath(root, Path.GetRelativePath(root, path));
+        }
+    }
+    public static void ManualJoin(string root)
+    {
+        var storeRoot = StorageRoot(root);
+        int count = 0;
+        foreach (var path in PointerFiles(root, root).ToList())
+        {
+            var bytes = File.ReadAllBytes(path); var temp = path + ".restore-" + Guid.NewGuid().ToString("N");
+            try
+            {
+                using (var output = File.Create(temp)) Smudge(new MemoryStream(bytes), output, storeRoot);
+                if (!File.ReadAllBytes(path).AsSpan().SequenceEqual(bytes)) throw new Exception("Pointer changed during restore: " + path);
+                File.Move(temp, path, true); count++;
+                Console.WriteLine("Restored: " + Path.GetRelativePath(root, path));
+            }
+            finally { if (File.Exists(temp)) File.Delete(temp); }
+        }
+        Console.WriteLine($"Restore complete: {count} files. Chunks retained.");
+    }
+    static string StorageRoot(string root)
+    {
+        try { return Text("-C", root, "rev-parse", "--show-toplevel"); }
+        catch { return root; }
+    }
+    static void Smudge(Stream source, Stream destination, string? root = null)
     {
         var prefix = Encoding.UTF8.GetBytes(Prefix);
         var head = new byte[prefix.Length];
@@ -137,7 +238,13 @@ static class GitIntegration
             using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
             foreach (var chunk in pointer.Chunks)
             {
-                var part = Git(null, "cat-file", "blob", chunk.Oid);
+                byte[] part;
+                if (root != null)
+                {
+                    var path = SafePath(root, Store + chunk.Oid);
+                    part = File.Exists(path) ? File.ReadAllBytes(path) : Git(null, "-C", root, "cat-file", "blob", chunk.Oid);
+                }
+                else part = Git(null, "cat-file", "blob", chunk.Oid);
                 if (part.Length != chunk.Size || Hash(part) != chunk.Sha256) throw new Exception("Missing/corrupt chunk: " + chunk.Oid);
                 hash.AppendData(part); file.Write(part);
             }
@@ -173,6 +280,14 @@ static class GitIntegration
         foreach (var p in Pointers(small).Values)
             foreach (var chunk in p.Chunks)
             {
+                var cache = SafePath(Text("rev-parse", "--show-toplevel"), Store + chunk.Oid);
+                if (File.Exists(cache))
+                {
+                    var data = File.ReadAllBytes(cache);
+                    if (data.Length != chunk.Size || Hash(data) != chunk.Sha256 || BlobId(data, chunk.Oid.Length == 64) != chunk.Oid) throw new Exception("Corrupt chunk cache.");
+                    var saved = Encoding.ASCII.GetString(Git(data, "hash-object", "-w", "--stdin")).Trim();
+                    if (saved != chunk.Oid) throw new Exception("Chunk uses a different Git object format.");
+                }
                 if (long.Parse(Text("cat-file", "-s", chunk.Oid)) != chunk.Size) throw new Exception("Chunk size mismatch.");
                 chunks[chunk.Oid] = chunk;
             }

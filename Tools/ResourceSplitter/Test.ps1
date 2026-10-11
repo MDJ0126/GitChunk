@@ -15,7 +15,7 @@ Get-ChildItem (Join-Path $fixture 'Assets') -File | ForEach-Object { $hashes[$_.
 $folderHash = (Get-FileHash (Join-Path $fixture 'Assets.meta')).Hash
 Push-Location $fixture
 try {
-    & $exe split
+    & $exe legacy-split
     if ($LASTEXITCODE -ne 0 -or (Test-Path Assets/large.bin) -or !(Test-Path Assets/large.bin.part000002) -or (Test-Path ResourceParts)) { throw 'Large file split failed' }
     $manifest = Get-Content ResourceSplitter.manifest.json -Raw | ConvertFrom-Json
     if ($manifest.Files.Count -ne 2 -or $manifest.Files[0].Path -ne 'Assets/large.bin') { throw 'Threshold selection failed' }
@@ -29,7 +29,7 @@ try {
     if ($LASTEXITCODE -ne 1 -or (Test-Path Assets/large.bin) -or (Test-Path Assets/large.bin.meta)) { throw 'Corrupt metadata not rejected before restore' }
     [IO.File]::WriteAllBytes((Join-Path $fixture 'Assets/large.bin.meta.part000001'), $metaBackup)
     if ((Get-FileHash Assets.meta).Hash -ne $folderHash) { throw 'Folder meta changed' }
-    & $exe split
+    & $exe legacy-split
     if ($LASTEXITCODE -ne 1) { throw 'Repeat split guard failed' }
     $partPath = Join-Path $fixture 'Assets/large.bin.part000002'
     $partBytes = [IO.File]::ReadAllBytes($partPath)
@@ -44,19 +44,19 @@ try {
     if ((Get-FileHash Assets/large.bin.meta).Hash -ne $hashes['large.bin.meta'] -or (Test-Path Assets/large.bin.meta.part000001)) { throw 'Original metadata not restored' }
     $preserved = Get-ChildItem Assets -Filter 'large.bin.meta.restore-*'
     if ($preserved.Count -ne 1 -or (Get-FileHash $preserved[0].FullName).Hash -ne $regeneratedHash) { throw 'Regenerated metadata was not retained' }
-    & $exe split
+    & $exe legacy-split
     if ($LASTEXITCODE -ne 0 -or (Test-Path Assets/large.bin.meta)) { throw 'Second metadata backup failed' }
     & $exe join
     if ($LASTEXITCODE -ne 0 -or (Get-FileHash Assets/large.bin.meta).Hash -ne $hashes['large.bin.meta']) { throw 'Missing metadata restoration failed' }
     Set-Content Assets/large.bin.part000001 'existing chunk'
     $collisionHash = (Get-FileHash Assets/large.bin.part000001).Hash
-    & $exe split
+    & $exe legacy-split
     if ($LASTEXITCODE -ne 1 -or (Get-FileHash Assets/large.bin.part000001).Hash -ne $collisionHash -or !(Test-Path Assets/large.bin)) { throw 'Collision check failed' }
     Remove-Item Assets/large.bin.part000001
     $settings = Get-Content ResourceSplitter.settings.json -Raw | ConvertFrom-Json
     $settings.IncludePaths = @('Assets/small.txt','Assets/boundary.bin','Assets/below.bin','Assets/empty.bin')
     $settings | ConvertTo-Json -Depth 10 | Set-Content ResourceSplitter.settings.json
-    & $exe split
+    & $exe legacy-split
     if ($LASTEXITCODE -ne 0 -or (Test-Path ResourceSplitter.manifest.json)) { throw 'No-large-files case failed' }
     'PASS: >50 MiB only; exact/below boundary and small/empty files unchanged; meta preserved; inline chunks; hash restore; corruption and collision guards; no eligible files'
 } finally { Pop-Location }

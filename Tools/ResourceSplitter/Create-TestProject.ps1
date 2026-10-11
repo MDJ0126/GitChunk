@@ -47,18 +47,18 @@ $settings = @{
 TextFile 'ResourceSplitter.settings.json' ($settings | ConvertTo-Json -Depth 5)
 TextFile '테스트방법.txt' @'
 이 폴더는 ResourceSplitter용 합성 데이터 예제입니다. 실제 Unity/Unreal 프로젝트나 재생 가능한 에셋이 아닙니다.
-현재 상태: 원본 파일 상태. manifest나 .part 조각이 없는 것이 정상입니다.
+현재 상태: 원본 파일 상태. 1번/2번과 3번은 같은 포인터·조각 형식을 사용합니다.
 
 수동 분할·복원 시험 (C:/Projects/ResourceSplitter 폴더에서 실행):
   ./ResourceSplitter.exe split ./TestProject
   ./ResourceSplitter.exe join ./TestProject
 
 EXE 메뉴에서는 대상 경로 C:/Projects/ResourceSplitter/TestProject를 입력하고 1번 분할, 2번 복원을 선택합니다.
-분할 후 60 MiB 파일은 49 MiB + 11 MiB의 조각 2개로 저장되고 원본은 삭제됩니다.
-연결된 큰파일_60MiB.bin.meta도 조각으로 보관되며 복원 시 함께 돌아옵니다.
+분할 후 60 MiB 파일은 작은 복원 정보로 바뀌며 실제 데이터는 49 MiB + 11 MiB 조각으로 저장됩니다.
+Git 루트의 .resourcesplitter/objects/에 조각이 저장됩니다. .meta는 그대로 유지됩니다.
 정확히 50 MiB인 파일, 50 MiB보다 1바이트 작은 파일, 작은 텍스트와 빈 파일은 분할하지 않습니다.
 Library 폴더는 분할 대상에서 제외됩니다.
-복원 후에는 조각과 ResourceSplitter.manifest.json이 없어지고 원본들이 돌아옵니다.
+복원 후에는 실제 원본들이 돌아옵니다. 조각은 삭제하지 않고 유지합니다.
 expected-sha256.txt에는 생성 직후의 원본 해시가 있습니다.
 
 예제 다시 생성 (분할된 상태에서는 먼저 복원):
