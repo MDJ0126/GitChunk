@@ -1,5 +1,5 @@
 <Window x:Class="MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="Resource Splitter"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="Resource Splitter" Icon="Assets/AppIcon.ico"
         Width="1000" Height="790" MinWidth="870" MinHeight="730" WindowStartupLocation="CenterScreen"
         Background="#F4F6FA" FontFamily="Malgun Gothic" FontSize="13" Foreground="#182238"
         AllowDrop="True" DragOver="OnDragOver" Drop="OnDrop" Closing="OnClosing">
@@ -41,9 +41,7 @@
             <Grid Margin="24,32">
                 <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
                 <StackPanel>
-                    <Border Background="#3177F3" CornerRadius="12" Width="44" Height="44" HorizontalAlignment="Left">
-                        <TextBlock Text="▦" FontFamily="Segoe UI Symbol" FontSize="28" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    </Border>
+                    <Image Source="Assets/AppIcon.png" Width="64" Height="64" HorizontalAlignment="Left"/>
                     <TextBlock Text="RESOURCE" FontFamily="Segoe UI" FontWeight="Bold" FontSize="17" Foreground="White" Margin="0,20,0,0"/>
                     <TextBlock Text="SPLITTER" FontFamily="Segoe UI" FontWeight="Bold" FontSize="17" Foreground="White"/>
                     <TextBlock Text="파일은 가볍게.&#x0a;작업은 그대로." Foreground="#A5B5CE" Margin="0,16,0,34" LineHeight="23"/>

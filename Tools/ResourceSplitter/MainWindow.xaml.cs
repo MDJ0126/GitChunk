@@ -15,9 +15,13 @@ partial class MainWindow : Window
 {
     bool busy;
     string mode = "git-install";
+    string installation = "unknown";
+    int statusRevision;
     public MainWindow()
     {
         InitializeComponent();
+        FolderPath.TextChanged += async (_, _) => await RefreshInstallation();
+        Activated += async (_, _) => { if (!busy) await RefreshInstallation(); };
         FolderPath.Text = Directory.GetCurrentDirectory();
         GitMode.IsChecked = true;
         Append("프로젝트 폴더와 작업을 선택하세요.");
@@ -38,6 +42,39 @@ partial class MainWindow : Window
             "git-install" => ("자동화 설치  →", "Git 저장소의 루트 폴더를 선택하세요. 설치 후 초기 설정을 한 번 커밋해야 합니다."),
             _ => ("분할 시작  →", "50 MiB 초과 파일만 분할합니다. 작업 전 에디터를 닫고, 에디터를 열기 전에 원본을 복원하세요.")
         };
+        ApplyInstallation();
+    }
+    void ApplyInstallation()
+    {
+        if (mode != "git-install") return;
+        RunButton.Content = installation == "installed" ? "자동화 업데이트 / 재설치  →" : "자동화 설치  →";
+        ModeHint.Text = installation switch {
+            "installed" => "✓ 이 PC의 선택한 저장소에 Git 자동화가 설치되어 있습니다. 다시 실행하면 도구와 설정을 업데이트합니다.",
+            "incomplete" => "⚠ 자동화 설정이 일부 누락되었거나 다른 운영체제용입니다. 재설치하여 확인하세요.",
+            "not-installed" => "이 PC의 선택한 저장소에는 Git 자동화가 설치되지 않았습니다.",
+            "not-root" => "Git 저장소의 최상위 폴더를 선택해 주세요.",
+            "not-repository" => "선택한 폴더는 Git 저장소가 아닙니다.",
+            _ => "설치 상태를 확인할 수 없습니다. 폴더 경로와 Git 설치를 확인해 주세요."
+        };
+    }
+    async Task RefreshInstallation()
+    {
+        var revision = ++statusRevision;
+        await Task.Delay(250);
+        if (revision != statusRevision || busy) return;
+        try {
+            var path = Path.GetFullPath(FolderPath.Text.Trim().Trim('"'));
+            if (!Directory.Exists(path)) throw new Exception();
+            var info = new ProcessStartInfo(Environment.ProcessPath!) { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true, StandardOutputEncoding = Encoding.UTF8 };
+            info.ArgumentList.Add("git-status"); info.ArgumentList.Add(path);
+            using var child = Process.Start(info)!;
+            var output = child.StandardOutput.ReadToEndAsync(); var errors = child.StandardError.ReadToEndAsync();
+            await child.WaitForExitAsync(); await errors;
+            var state = (await output).Trim();
+            if (revision != statusRevision || busy) return;
+            installation = child.ExitCode == 0 ? state : "unknown";
+        } catch { if (revision != statusRevision) return; installation = "unknown"; }
+        ApplyInstallation();
     }
     void Append(string text)
     {
@@ -103,6 +140,7 @@ partial class MainWindow : Window
             busy = false;
             RunButton.IsEnabled = BrowseButton.IsEnabled = Modes.IsEnabled = FolderPath.IsEnabled = true;
             Progress.IsIndeterminate = false; Progress.Visibility = Visibility.Collapsed;
+            await RefreshInstallation();
         }
     }
     void CopyLog(object sender, RoutedEventArgs e)
@@ -134,7 +172,7 @@ partial class MainWindow : Window
         RenderOptions.ProcessRenderMode = RenderMode.SoftwareOnly;
         var app = new Application();
         var window = new MainWindow { WindowStartupLocation = WindowStartupLocation.Manual, Left = -10000, Top = -10000, ShowInTaskbar = false, ShowActivated = false };
-        window.Loaded += (_, _) => window.Dispatcher.BeginInvoke(() =>
+        window.Loaded += async (_, _) => { await window.RefreshInstallation(); await window.Dispatcher.InvokeAsync(() =>
         {
             var content = (FrameworkElement)window.Content;
             content.UpdateLayout();
@@ -143,7 +181,7 @@ partial class MainWindow : Window
             var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap));
             using (var output = File.Create(Path.GetFullPath(path))) encoder.Save(output);
             window.Close();
-        }, DispatcherPriority.ApplicationIdle);
+        }, DispatcherPriority.ApplicationIdle); };
         return app.Run(window);
     }
     internal static int Smoke(string folder)

@@ -7,6 +7,7 @@
     <TargetFramework Condition="'$(WindowsBuild)' == 'True'">net9.0-windows</TargetFramework>
     <TargetFramework Condition="'$(WindowsBuild)' != 'True'">net9.0</TargetFramework>
     <UseWPF Condition="'$(WindowsBuild)' == 'True'">true</UseWPF>
+    <ApplicationIcon Condition="'$(WindowsBuild)' == 'True'">Assets/AppIcon.ico</ApplicationIcon>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AssemblyName>ResourceSplitter</AssemblyName>
@@ -16,6 +17,10 @@
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
     <DebugType>embedded</DebugType>
   </PropertyGroup>
+  <ItemGroup Condition="'$(WindowsBuild)' == 'True'">
+    <Resource Include="Assets/AppIcon.png"/>
+    <Resource Include="Assets/AppIcon.ico"/>
+  </ItemGroup>
   <ItemGroup Condition="'$(WindowsBuild)' != 'True'">
     <Compile Remove="MainWindow.xaml.cs"/>
     <None Remove="MainWindow.xaml"/>

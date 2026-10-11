@@ -407,10 +407,28 @@ static class GitIntegration
         }
         Console.WriteLine("자동화 설치 완료. git add --renormalize . 후 설정과 도구를 함께 커밋하세요. 새 PC에서도 git-install을 한 번 실행하세요.");
     }
+    static void InstallationStatus(string root)
+    {
+        Directory.SetCurrentDirectory(Path.GetFullPath(root));
+        string actual;
+        try { actual = Path.GetFullPath(Text("rev-parse", "--show-toplevel")); }
+        catch { Console.WriteLine("not-repository"); return; }
+        if (!actual.Equals(Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar), FileSystemPaths.Comparison)) { Console.WriteLine("not-root"); return; }
+        string Config(string key) { try { return Text("config", "--local", "--get", key); } catch { return ""; } }
+        var clean = Config("filter.resourcesplitter.clean");
+        var smudge = Config("filter.resourcesplitter.smudge");
+        var hooks = Path.GetFullPath(Text("rev-parse", "--git-path", "hooks"));
+        var tool = Path.Combine(actual, ".resourcesplitter", InstalledToolName);
+        var attributes = Path.Combine(actual, ".gitattributes");
+        bool Hook(string name, string command) => File.Exists(Path.Combine(hooks, name)) && File.ReadAllText(Path.Combine(hooks, name)).Replace("\r\n", "\n") == "#!/bin/sh\n# ResourceSplitter managed hook\nexec \".resourcesplitter/" + InstalledToolName + "\" " + command + "\n";
+        var installed = File.Exists(tool) && clean == "\".resourcesplitter/" + InstalledToolName + "\" git-clean" && smudge == "\".resourcesplitter/" + InstalledToolName + "\" git-smudge" && Config("filter.resourcesplitter.required") == "true" && Hook("pre-commit", "git-prepare") && Hook("pre-push", "git-check-push") && File.Exists(attributes) && File.ReadAllText(attributes).Contains("# ResourceSplitter automatic storage");
+        Console.WriteLine(installed ? "installed" : clean.Length > 0 || smudge.Length > 0 ? "incomplete" : "not-installed");
+    }
     public static int Run(string[] args)
     {
         switch (args[0])
         {
+            case "git-status": InstallationStatus(args.Length > 1 ? args[1] : Directory.GetCurrentDirectory()); break;
             case "git-install": Install(args.Length > 1 ? args[1] : Directory.GetCurrentDirectory()); break;
             case "git-clean": Clean(); break;
             case "git-smudge": Smudge(Console.OpenStandardInput(), Console.OpenStandardOutput()); break;

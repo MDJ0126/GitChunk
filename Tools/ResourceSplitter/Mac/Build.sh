@@ -10,6 +10,9 @@ esac
 out="$script_dir/../bin/mac/$rid"
 app="$out/ResourceSplitter.app"
 mkdir -p "$app/Contents/MacOS"
+mkdir -p "$app/Contents/Resources"
+iconutil -c icns "$script_dir/../Assets/AppIcon.iconset" -o "$app/Contents/Resources/AppIcon.icns"
+cp "$script_dir/../Assets/AppIcon.png" "$app/Contents/Resources/AppIcon.png"
 dotnet publish "$script_dir/../ResourceSplitter.csproj" -c Release -r "$rid" --self-contained true -o "$out/cli"
 cp "$out/cli/ResourceSplitter" "$app/Contents/MacOS/ResourceSplitter-cli"
 xcrun swiftc -swift-version 5 -parse-as-library -target "$arch-apple-macos13.0" -sdk "$(xcrun --show-sdk-path)" \
@@ -21,6 +24,7 @@ cat > "$app/Contents/Info.plist" <<'PLIST'
 <key>CFBundleExecutable</key><string>ResourceSplitter</string>
 <key>CFBundleIdentifier</key><string>local.resourcesplitter.app</string>
 <key>CFBundleName</key><string>Resource Splitter</string>
+<key>CFBundleIconFile</key><string>AppIcon</string>
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>CFBundleVersion</key><string>1</string>
 <key>CFBundleShortVersionString</key><string>1.0</string>

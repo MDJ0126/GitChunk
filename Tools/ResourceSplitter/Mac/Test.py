@@ -31,6 +31,8 @@ with tempfile.TemporaryDirectory(prefix="ResourceSplitter-native-") as temp:
     run(writer, "git", "config", "user.email", "test@example.invalid")
     assets = writer / "Assets"
     assets.mkdir()
+    assert run(writer, tool, "git-status", str(writer)).strip() == "not-installed"
+    assert run(writer, tool, "git-status", str(assets)).strip() == "not-root"
     asset = assets / "한글 asset.bin"
     with asset.open("wb") as stream:
         stream.truncate(60 * 1024 * 1024)
@@ -50,6 +52,10 @@ with tempfile.TemporaryDirectory(prefix="ResourceSplitter-native-") as temp:
     run(writer, tool, "join", str(writer))
     assert digest(moved) == original
     run(writer, tool, "git-install", str(writer))
+    assert run(writer, tool, "git-status", str(writer)).strip() == "installed"
+    run(writer, "git", "config", "filter.resourcesplitter.required", "false")
+    assert run(writer, tool, "git-status", str(writer)).strip() == "incomplete"
+    run(writer, "git", "config", "filter.resourcesplitter.required", "true")
     installed = writer / ".resourcesplitter" / (
         "ResourceSplitter.exe" if os.name == "nt" else
         "ResourceSplitter-osx-" + ("arm64" if os.uname().machine == "arm64" else "x64")
@@ -67,7 +73,9 @@ with tempfile.TemporaryDirectory(prefix="ResourceSplitter-native-") as temp:
     run(writer, "git", "push", "-u", "origin", "main")
     reader = root / "reader"
     run(root, "git", "clone", "--branch", "main", str(remote), str(reader))
+    assert run(reader, tool, "git-status", str(reader)).strip() == "not-installed"
     run(reader, tool, "git-install", str(reader))
+    assert run(reader, tool, "git-status", str(reader)).strip() == "installed"
     assert digest(reader / "Assets/moved.bin") == original
     assert not run(reader, "git", "status", "--porcelain")
     with moved.open("r+b") as stream:

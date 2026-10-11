@@ -18,6 +18,8 @@ EXE를 더블클릭하면 Windows GUI가 열립니다. 폴더 선택 또는 폴�
 
 처음 실행하면 **Git 자동화(권장)**가 미리 선택됩니다. 실행 버튼을 눌러야 설치됩니다.
 
+Git 자동화 화면은 선택한 폴더의 이 PC 설치 상태를 확인합니다. 정상 설치되면 설치됨 안내와 **자동화 업데이트 / 재설치** 버튼이 표시됩니다. 폴더 변경, 창 재활성화 및 작업 완료 후 다시 확인하며, 일부 설정이 누락되면 재설치 안내를 표시합니다. 다른 PC에서는 별도 설치가 필요합니다.
+
 ```powershell
 ./ResourceSplitter.exe split ./TestProject | Out-Host
 ./ResourceSplitter.exe join ./TestProject | Out-Host

@@ -13,6 +13,35 @@ enum Operation: String, CaseIterable {
     @Published var operation = Operation.automate
     @Published var busy = false
     @Published var status = "준비됨"
+    @Published var installation = "unknown"
+    private var statusRevision = 0
+    var installationText: String {
+        switch installation {
+        case "installed": return "✓ 이 PC의 선택한 저장소에 Git 자동화가 설치되어 있습니다."
+        case "incomplete": return "⚠ 일부 설정이 누락되었거나 다른 운영체제용입니다. 재설치해 주세요."
+        case "not-installed": return "이 PC의 선택한 저장소에는 Git 자동화가 설치되지 않았습니다."
+        case "not-root": return "Git 저장소의 최상위 폴더를 선택해 주세요."
+        case "not-repository": return "선택한 폴더는 Git 저장소가 아닙니다."
+        default: return "설치 상태 확인 불가 · 폴더 경로와 Git 설치를 확인해 주세요."
+        }
+    }
+    func refreshInstallation() {
+        statusRevision += 1
+        let revision = statusRevision, path = folder
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            guard revision == self.statusRevision, !self.busy, let executable = Bundle.main.executableURL else { return }
+            let backend = executable.deletingLastPathComponent().appendingPathComponent("ResourceSplitter-cli")
+            DispatchQueue.global(qos: .utility).async {
+                let process = Process(), output = Pipe()
+                process.executableURL = backend; process.arguments = ["git-status", path]
+                process.standardOutput = output; process.standardError = FileHandle.nullDevice
+                var state = "unknown"
+                do { try process.run(); let data = output.fileHandleForReading.readDataToEndOfFile(); process.waitUntilExit(); if process.terminationStatus == 0 { state = String(decoding: data, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines) } } catch {}
+                let result = state
+                DispatchQueue.main.async { if revision == self.statusRevision { self.installation = result } }
+            }
+        }
+    }
     @Published var log = "프로젝트 폴더와 작업을 선택하세요.\n"
     private var worker: Process?
     func choose() {
@@ -52,6 +81,7 @@ enum Operation: String, CaseIterable {
         process.terminationHandler = { finished in
             group.notify(queue: .main) {
                 self.busy = false; self.worker = nil
+                self.refreshInstallation()
                 self.status = finished.terminationStatus == 0 ? "\(selected.title) 완료" : "작업 실패 · 기록을 확인해 주세요"
                 if finished.terminationStatus == 0 && selected == .automate {
                     self.append("\n최초 설치 후 실행할 명령:\ngit add --renormalize .\ngit add .gitattributes .gitignore .resourcesplitter/ResourceSplitter-osx-*\ngit commit -m \"Enable automatic resource splitting\"\n")
@@ -73,7 +103,9 @@ struct ContentView: View {
     var body: some View {
         HStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 16) {
-                Image(systemName: "square.grid.3x3.fill").font(.system(size: 30)).foregroundStyle(.white).padding(12).background(Color.blue).cornerRadius(12)
+                if let url = Bundle.main.url(forResource: "AppIcon", withExtension: "png"), let icon = NSImage(contentsOf: url) {
+                    Image(nsImage: icon).resizable().frame(width: 64, height: 64)
+                }
                 Text("RESOURCE\nSPLITTER").font(.system(size: 18, weight: .bold)).foregroundStyle(.white)
                 Text("파일은 가볍게.\n작업은 그대로.").foregroundStyle(.white.opacity(0.6)).lineSpacing(6)
                 Text("리소스 관리").fontWeight(.semibold).foregroundStyle(.white).padding(14).frame(maxWidth: .infinity, alignment: .leading).background(.white.opacity(0.1)).cornerRadius(8)
@@ -107,13 +139,13 @@ struct ContentView: View {
                         }.buttonStyle(.plain)
                     }
                 }.disabled(model.busy)
-                Text(model.operation == .automate ? "Git 루트 폴더를 선택하세요. 설치 후 초기 설정을 한 번 커밋해야 합니다." : "작업 전 에디터를 닫으세요. 분할 상태에서는 먼저 원본을 복원하세요.")
+                Text(model.operation == .automate ? model.installationText : "작업 전 에디터를 닫으세요. 분할 상태에서는 먼저 원본을 복원하세요.")
                     .font(.caption).foregroundStyle(.secondary).padding(12).frame(maxWidth: .infinity, alignment: .leading).background(Color.blue.opacity(0.04)).cornerRadius(8)
                 HStack {
                     Text(model.status).fontWeight(.semibold)
                     if model.busy { ProgressView().controlSize(.small) }
                     Spacer()
-                    Button(model.operation.action + "  →") { model.execute() }.buttonStyle(.borderedProminent).controlSize(.large).disabled(model.busy)
+                    Button((model.operation == .automate && model.installation == "installed" ? "자동화 업데이트 / 재설치" : model.operation.action) + "  →") { model.execute() }.buttonStyle(.borderedProminent).controlSize(.large).disabled(model.busy)
                 }
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
@@ -124,7 +156,7 @@ struct ContentView: View {
                     ScrollView { Text(model.log).font(.system(size: 11, design: .monospaced)).foregroundStyle(.secondary).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading) }
                 }.padding(18).frame(maxHeight: .infinity).background(.white).cornerRadius(12)
             }.padding(28).frame(minWidth: 670, minHeight: 680).background(Color(red: 0.96, green: 0.97, blue: 0.99))
-        }.foregroundStyle(ink)
+        }.foregroundStyle(ink).onAppear { model.refreshInstallation() }.onChange(of: model.folder) { _ in model.refreshInstallation() }.onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in model.refreshInstallation() }
     }
 }
 
