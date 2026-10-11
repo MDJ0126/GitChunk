@@ -72,4 +72,5 @@ try {
     if ($LASTEXITCODE -eq 0 -or (Get-Content small.bin).Trim() -ne 'user modification') { throw 'Dirty tree protection failed' }
     Write-Host 'PASS: LFS download, conversion, hashes, small files, history, commit/push/clone, custom hook protection.'
 } finally { Remove-Item Env:GIT_LFS_SKIP_SMUDGE -ErrorAction SilentlyContinue; Pop-Location }
+exit 0
 
