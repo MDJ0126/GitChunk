@@ -1,0 +1,10 @@
+# Generated from the Git index. Do not edit.
+# Chunk order for each original file; restoration uses its pointer.
+
+["TestProject/Assets/Audio/큰파일_60MiB.bin"]
+000001 = 687cc42cac52b089b74872bd308db6215bb0180e
+000002 = 15ae5f2c4c4ce02a5f5ae4d2b5f76b6045080659
+
+["TestProject/Assets/Textures/LargeImage_60MiB.bmp"]
+000001 = d12e3144263f53af7a6cb23d07d6b66d8a351286
+000002 = 0fc9cf4f34cba79cb591929dc2edb1e37d210daf

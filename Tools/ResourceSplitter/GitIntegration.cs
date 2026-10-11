@@ -313,7 +313,8 @@ static partial class GitIntegration
                 throw new Exception("Large raw blob is staged: " + string.Join(", ", candidates[fields[0]]) + ". Check attributes and run git add again.");
             if (size <= 1024 * 1024) small.Add(fields[0]);
         }
-        foreach (var p in Pointers(small).Values)
+        var pointers = Pointers(small);
+        foreach (var p in pointers.Values)
             foreach (var chunk in p.Chunks)
             {
                 var cache = SafePath(Text("rev-parse", "--show-toplevel"), Store + chunk.Oid);
@@ -343,7 +344,43 @@ static partial class GitIntegration
             Text("update-index", "--add", "--cacheinfo", "100644", chunk.Oid, Store + chunk.Oid);
         }
         foreach (var path in existing.Where(p => !p.StartsWith(Store, StringComparison.Ordinal) || !chunks.ContainsKey(p[Store.Length..]))) Text("update-index", "--force-remove", "--", path);
+        WriteChunkList(root, pointers.SelectMany(pair => candidates[pair.Key].Select(path => (path, pair.Value))), true);
         Console.Error.WriteLine("Git Chunk: verified and staged " + chunks.Count + " chunks.");
+    }
+    // Informational only: restoration continues to use the original pointer format.
+    static void WriteChunkList(string root, IEnumerable<(string Path, Pointer Pointer)> files, bool stage)
+    {
+        var text = new StringBuilder("# Generated from the Git index. Do not edit.\n# Chunk order for each original file; restoration uses its pointer.\n");
+        foreach (var file in files.OrderBy(x => x.Path, StringComparer.Ordinal))
+        {
+            text.Append('\n').Append('[').Append(JsonSerializer.Serialize(file.Path, new JsonSerializerOptions { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping })).Append("]\n");
+            for (int i = 0; i < file.Pointer.Chunks.Count; i++)
+                text.Append((i + 1).ToString("D6")).Append(" = ").Append(file.Pointer.Chunks[i].Oid).Append('\n');
+        }
+        var target = ChunkRules.PathFor(root, "chunks.txt");
+        Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+        var temporary = target + ".tmp-" + Guid.NewGuid().ToString("N");
+        try { File.WriteAllText(temporary, text.ToString(), new UTF8Encoding(false)); File.Move(temporary, target, true); }
+        finally { if (File.Exists(temporary)) File.Delete(temporary); }
+        if (stage) Text("add", "--", ".gitchunk/chunks.txt");
+    }
+    static void RefreshChunkList(string root)
+    {
+        var entries = Encoding.UTF8.GetString(Git(null, "ls-files", "--stage", "-z")).Split('\0', StringSplitOptions.RemoveEmptyEntries);
+        var files = new List<(string Path, string Oid)>();
+        foreach (var entry in entries)
+        {
+            var tab = entry.IndexOf('\t'); var fields = entry[..tab].Split(' '); var path = entry[(tab + 1)..];
+            if (fields[2] != "0") throw new Exception("Resolve merge conflicts before updating the chunk list.");
+            if (fields[0] != "100644" && fields[0] != "100755") continue;
+            if (path.StartsWith(".gitchunk/", StringComparison.Ordinal) || path.StartsWith(".resourcesplitter/", StringComparison.Ordinal)) continue;
+            files.Add((path, fields[1]));
+        }
+        var ids = files.Select(x => x.Oid).Distinct().ToArray();
+        var report = ids.Length == 0 ? "" : Encoding.UTF8.GetString(Git(Encoding.ASCII.GetBytes(string.Join("\n", ids) + "\n"), "cat-file", "--batch-check=%(objectname) %(objecttype) %(objectsize)"));
+        var small = report.Split('\n', StringSplitOptions.RemoveEmptyEntries).Select(x => x.Split(' ')).Where(x => x.Length == 3 && x[1] == "blob" && long.Parse(x[2]) <= 1024 * 1024).Select(x => x[0]);
+        var pointers = Pointers(small);
+        WriteChunkList(root, files.Where(x => pointers.ContainsKey(x.Oid)).Select(x => (x.Path, pointers[x.Oid])), false);
     }
     static void CheckPush()
     {
@@ -410,7 +447,15 @@ static partial class GitIntegration
         var attributes = Path.Combine(actual, ".gitattributes");
         var old = File.Exists(attributes) ? File.ReadAllText(attributes) : "";
         if (!old.Contains("# GitChunk automatic storage")) File.AppendAllText(attributes,
-            "\n# GitChunk automatic storage\n* filter=gitchunk -text\n*.meta -filter\n.gitattributes -filter\n.gitignore -filter\n.gitchunk/** -filter -text -diff -merge\n.gitchunk/rules.txt -filter text eol=lf diff\n.gitchunk/presets/** -filter text eol=lf diff\n.resourcesplitter/** -filter -text -diff -merge\nGitChunk.* -filter\nResourceSplitter.* -filter\nTools/ResourceSplitter/** -filter\n", new UTF8Encoding(false));
+            "\n# GitChunk automatic storage\n* filter=gitchunk -text\n*.meta -filter\n.gitattributes -filter\n.gitignore -filter\n.gitchunk/** -filter -text -diff -merge\n.gitchunk/rules.txt -filter text eol=lf diff\n.gitchunk/chunks.txt -filter text eol=lf diff\n.resourcesplitter/** -filter -text -diff -merge\nGitChunk.* -filter\nResourceSplitter.* -filter\nTools/ResourceSplitter/** -filter\n", new UTF8Encoding(false));
+        else
+        {
+            var updated = old.Replace("\r\n", "\n");
+            updated = Regex.Replace(updated, @"(?m)^\.gitchunk/presets/\*\* -filter text eol=lf diff\n?", "");
+            if (!updated.Contains(".gitchunk/chunks.txt -filter text eol=lf diff"))
+                updated = updated.TrimEnd('\n') + "\n.gitchunk/chunks.txt -filter text eol=lf diff\n";
+            if (updated != old) File.WriteAllText(attributes, updated, new UTF8Encoding(false));
+        }
         var ignore = Path.Combine(actual, ".gitignore");
         if (!File.Exists(ignore) || !File.ReadAllText(ignore).Contains("/.gitchunk/objects/"))
             File.AppendAllText(ignore, "\n# GitChunk chunk cache (required chunks are staged by the hook)\n/.gitchunk/objects/\n", new UTF8Encoding(false));
@@ -457,6 +502,14 @@ static partial class GitIntegration
             finally { if (File.Exists(temp)) File.Delete(temp); }
         }
         MigrateLegacyStorage(actual);
+        RefreshChunkList(actual);
+        var presets = ChunkRules.PathFor(actual, "presets");
+        if (Directory.Exists(presets)) {
+            var backup = Path.Combine(Text("rev-parse", "--absolute-git-dir"), "gitchunk", "presets-backup-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(Path.GetDirectoryName(backup)!);
+            Directory.Move(presets, backup);
+            Console.WriteLine("Old presets backed up: " + backup);
+        }
         Console.WriteLine("Git Chunk installed. Run git add -u, then git add --renormalize . and commit the configuration and tool. Install once on each new computer.");
     }
     static void InstallationStatus(string root)
@@ -482,20 +535,10 @@ static partial class GitIntegration
         switch (args[0])
         {
             case "git-rules-read": Console.Write(ChunkRules.Load(args[1])); break;
-            case "git-presets-list": {
-                var folder = ChunkRules.PathFor(args[1], "presets");
-                var names = Directory.Exists(folder) ? Directory.GetFiles(folder, "*.txt").Select(x => Path.GetFileNameWithoutExtension(x)) : Enumerable.Empty<string>();
-                Console.WriteLine(string.Join("\n", names.Concat(new[] { "default", "unity", "unreal" }).Distinct().OrderBy(x => x))); break;
-            }
-            case "git-preset-read": {
-                var path = ChunkRules.PathFor(args[1], ChunkRules.PresetPath(args[2]));
-                Console.Write(File.Exists(path) ? ChunkRules.EnglishTemplate(File.ReadAllText(path)) : args[2] switch { "unity" => ChunkRules.Unity, "unreal" => ChunkRules.Unreal, _ => ChunkRules.Default }); break;
-            }
             case "git-rules-save": ChunkRules.Save(args[1], Console.In.ReadToEnd()); break;
-            case "git-preset-save": ChunkRules.Save(args[1], Console.In.ReadToEnd(), ChunkRules.PresetPath(args[2])); break;
             case "git-rules-match": Console.WriteLine(ChunkRules.Matches(args[1], args[2]) ? "include" : "exclude"); break;
             case "git-status": InstallationStatus(args.Length > 1 ? args[1] : Directory.GetCurrentDirectory()); break;
-            case "git-install": Install(args.Length > 1 ? args[1] : Directory.GetCurrentDirectory()); break;
+            case "git-install": Install(args.Length > 1 ? args[1] : Directory.GetCurrentDirectory()); Console.WriteLine("Applied Git Chunk " + ToolUpdate.VersionText + " from " + Environment.ProcessPath); ToolUpdate.Check(); break;
             case "git-clean": Clean(args.Length > 1 ? args[1] : null); break;
             case "git-smudge": Smudge(Console.OpenStandardInput(), Console.OpenStandardOutput()); break;
             case "git-prepare": Prepare(); break;

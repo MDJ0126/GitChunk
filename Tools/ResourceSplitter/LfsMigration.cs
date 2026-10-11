@@ -173,7 +173,7 @@ static partial class GitIntegration
             Prepare();
             if (ordinaryLarge > 0) Console.WriteLine($"Converted and verified {ordinaryLarge} existing large ordinary Git files.");
             foreach (var path in attributeFiles) Text("add", "--", Path.GetRelativePath(actual, path));
-            Text("add", "--", ".gitattributes", ".gitignore", ".gitchunk/rules.txt", ".gitchunk/presets");
+            Text("add", "--", ".gitattributes", ".gitignore", ".gitchunk/rules.txt", ".gitchunk/chunks.txt");
             Console.WriteLine($"Converted and verified {assets.Count} current LFS files. Review git diff --cached, then commit and push. No commit or push was performed. Past commits and server LFS storage remain unchanged. Backup: {metadata}");
         }
         catch

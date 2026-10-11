@@ -72,16 +72,10 @@ static class ChunkRules
     }
     public static void EnsureDefaults(string root)
     {
-        foreach (var (name, text) in new[] { ("rules.txt", Default), ("presets/default.txt", Default), ("presets/unity.txt", Unity), ("presets/unreal.txt", Unreal) }) {
+        foreach (var (name, text) in new[] { ("rules.txt", Default) }) {
             var path = PathFor(root, name);
             if (!File.Exists(path)) Save(root, text, name);
             else { var old = File.ReadAllText(path); var translated = EnglishTemplate(old); if (old != translated) Save(root, translated, name); }
         }
-    }
-    public static string PresetPath(string name)
-    {
-        name = name.Trim();
-        if (!Regex.IsMatch(name, "^[\\p{L}\\p{N}_-]{1,60}$")) throw new Exception("Preset names may contain letters, numbers, - and _ only.");
-        return "presets/" + name + ".txt";
     }
 }

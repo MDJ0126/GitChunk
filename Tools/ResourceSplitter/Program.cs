@@ -257,6 +257,8 @@ class Program
     [STAThread]
     static int Main(string[] args)
     {
+        try { var forwarded = ToolUpdate.Forward(args); if (forwarded.HasValue) return forwarded.Value; }
+        catch (Exception ex) { Console.Error.WriteLine("ERROR: " + ex.Message); return 1; }
 #if WINDOWS
         if (args.Length == 0) return new System.Windows.Application().Run(new MainWindow());
         if (args[0] == "ui-preview" && args.Length == 2) return MainWindow.Preview(args[1]);
@@ -270,8 +272,13 @@ class Program
     }
     internal static int RunCommand(string[] args)
     {
+        if (args.Length > 0 && args[0] is "version" or "--version") { Console.WriteLine("Git Chunk " + ToolUpdate.VersionText); Console.WriteLine("Executable: " + Environment.ProcessPath); return 0; }
+        if (args.Length > 0 && args[0] == "update") {
+            try { return ToolUpdate.Update(Path.GetFullPath(args.Length > 1 ? args[1] : Directory.GetCurrentDirectory())); }
+            catch (Exception ex) { Console.Error.WriteLine("ERROR: Update failed: " + ex.Message); return 1; }
+        }
         if (args.Length == 0 || args[0] is "-h" or "--help") {
-            Console.WriteLine("Git Chunk\ngit chunk install [repository-root]\ngit chunk status [repository-root]\ngit chunk rules [repository-root]\nConfiguration: .gitchunk/rules.txt");
+            Console.WriteLine("Git Chunk " + ToolUpdate.VersionText + "\ngit chunk install [repository-root] (apply this version)\ngit chunk update [repository-root] (download latest and apply)\ngit chunk version\ngit chunk status [repository-root]\ngit chunk rules [repository-root]\nConfiguration: .gitchunk/rules.txt");
             return 0;
         }
         if (args[0] is "install" or "status" or "rules") {

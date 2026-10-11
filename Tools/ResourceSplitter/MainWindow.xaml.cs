@@ -28,11 +28,11 @@ partial class MainWindow : Window
     bool ValidRepository => installation is "installed" or "incomplete" or "legacy" or "not-installed";
     void ApplyState()
     {
-        RunButton.Content = installation == "installed" ? "Update / Reinstall  →" : installation == "legacy" ? "Upgrade to Git Chunk  →" : "Install Git Chunk  →";
+        RunButton.Content = installation == "installed" ? "Reinstall this version  →" : installation == "legacy" ? "Upgrade to Git Chunk  →" : "Install Git Chunk  →";
         RunButton.IsEnabled = !busy && ValidRepository;
         Modes.IsEnabled = !busy && ValidRepository;
         ModeHint.Text = installation switch {
-            "installed" => "✓ Installed · Automatic chunking and restoration are enabled for this repository on this computer.",
+            "installed" => "✓ Installed · Running Git Chunk " + ToolUpdate.Current.ToString(3) + ". Use Update to latest for a newer release.",
             "legacy" => "A legacy installation was found. Upgrade to Git Chunk to migrate its storage.",
             "incomplete" => "Some settings are missing. Reinstall to repair them.",
             "not-installed" => "Not installed · Install to convert current LFS files or restore a fresh clone.",
@@ -70,14 +70,7 @@ partial class MainWindow : Window
     }
     void LoadRules(string root)
     {
-        loading = true; try { RulesEditor.Text = ChunkRules.Load(root); dirty = false; UpdatePresets(root); } finally { loading = false; }
-    }
-    void UpdatePresets(string root)
-    {
-        var directory = ChunkRules.PathFor(root, "presets");
-        var names = Directory.Exists(directory) ? Directory.GetFiles(directory, "*.txt").Select(Path.GetFileNameWithoutExtension).ToList() : new List<string?>();
-        foreach (var name in new[] { "default", "unity", "unreal" }) if (!names.Contains(name)) names.Add(name);
-        PresetList.ItemsSource = names.OrderBy(x => x).ToList(); PresetList.SelectedItem = "default";
+        loading = true; try { RulesEditor.Text = ChunkRules.Load(root); dirty = false; } finally { loading = false; }
     }
     void RulesChanged(object sender, System.Windows.Controls.TextChangedEventArgs e) { if (!loading && StatusText != null) { dirty = true; StatusText.Text = "Rules changed · not saved yet"; } }
     void StoreRules()
@@ -88,20 +81,6 @@ partial class MainWindow : Window
         Append("Saved .gitchunk/rules.txt. Run git add --renormalize . to apply the policy to existing tracked files.");
     }
     void SaveRules(object sender, RoutedEventArgs e) { try { StoreRules(); } catch (Exception ex) { Append(ex.Message); } }
-    void LoadPreset(object sender, RoutedEventArgs e)
-    {
-        try {
-            if (PresetList.SelectedItem is not string name) return;
-            var path = ChunkRules.PathFor(Root(), ChunkRules.PresetPath(name));
-            RulesEditor.Text = File.Exists(path) ? ChunkRules.EnglishTemplate(File.ReadAllText(path)) : name switch { "unity" => ChunkRules.Unity, "unreal" => ChunkRules.Unreal, _ => ChunkRules.Default };
-            Append(name + " preset loaded into the editor. Click Save rules to apply it.");
-        } catch (Exception ex) { Append(ex.Message); }
-    }
-    void SavePreset(object sender, RoutedEventArgs e)
-    {
-        try { ChunkRules.Save(Root(), RulesEditor.Text, ChunkRules.PresetPath(PresetName.Text)); UpdatePresets(Root()); Append("Preset saved · " + PresetName.Text); }
-        catch (Exception ex) { Append(ex.Message); }
-    }
     async void Browse(object sender, RoutedEventArgs e)
     {
         if (dirty && MessageBox.Show(this, "Discard unsaved rules and switch folders?", "Git Chunk", MessageBoxButton.YesNo) != MessageBoxResult.Yes) return;
@@ -110,6 +89,19 @@ partial class MainWindow : Window
         if (picker.ShowDialog(this) == true) { FolderPath.Text = picker.FolderName; await RefreshInstallation(); }
     }
     async void Execute(object sender, RoutedEventArgs e) => await Install();
+    async void UpdateLatest(object sender, RoutedEventArgs e)
+    {
+        if (busy) return;
+        try {
+            await RefreshInstallation(); if (!ValidRepository) throw new Exception("Select the repository root.");
+            StoreRules(); busy = true; ApplyState(); FolderPath.IsEnabled = BrowseButton.IsEnabled = false;
+            Progress.Visibility = Visibility.Visible; Progress.IsIndeterminate = true; StatusText.Text = "Updating to latest release…";
+            await Command("update", Root(), true);
+            StatusText.Text = "Program and repository updated";
+            Append("Future git chunk commands use the updated version. Reopen the app to use the updated Windows interface.");
+        } catch (Exception ex) { StatusText.Text = "Update failed"; Append(ex.Message); }
+        finally { busy = false; FolderPath.IsEnabled = BrowseButton.IsEnabled = true; Progress.IsIndeterminate = false; Progress.Visibility = Visibility.Collapsed; await RefreshInstallation(); }
+    }
     async Task Install()
     {
         if (busy) return;
@@ -146,12 +138,11 @@ partial class MainWindow : Window
             window.FolderPath.Text = root; await window.RefreshInstallation();
             if (window.installation != "not-installed") throw new Exception("Expected fresh repository.");
             window.RulesEditor.Text = "Assets/**\n!Assets/Small/**\n"; window.StoreRules();
-            window.PresetName.Text = "custom-test"; window.SavePreset(window, new RoutedEventArgs());
-            if (!File.Exists(ChunkRules.PathFor(root, "presets/custom-test.txt"))) throw new Exception("Preset save failed.");
+            if (Directory.Exists(ChunkRules.PathFor(root, "presets"))) throw new Exception("Unexpected presets.");
             await window.Install(); if (window.installation != "installed") throw new Exception("Install state failed: " + window.Log.Text);
             var reopened = new MainWindow(); reopened.FolderPath.Text = root; await reopened.RefreshInstallation();
             if (reopened.installation != "installed" || reopened.RulesEditor.Text != window.RulesEditor.Text) throw new Exception("Reopen persistence failed.");
-            Console.WriteLine("PASS: GUI install, rules, custom preset, reopen status and persistence."); window.dirty = false; reopened.dirty = false; app.Shutdown(0);
+            Console.WriteLine("PASS: GUI install, rules, reopen status and persistence."); window.dirty = false; reopened.dirty = false; app.Shutdown(0);
         } catch (Exception ex) { window.dirty = false; Console.Error.WriteLine(ex); app.Shutdown(1); } }; return app.Run(window);
     }
 }

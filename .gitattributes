@@ -15,8 +15,8 @@ Tools/ResourceSplitter/** -filter
 .gitignore -filter
 .gitchunk/** -filter -text -diff -merge
 .gitchunk/rules.txt -filter text eol=lf diff
-.gitchunk/presets/** -filter text eol=lf diff
 .resourcesplitter/** -filter -text -diff -merge
 GitChunk.* -filter
 ResourceSplitter.* -filter
 Tools/ResourceSplitter/** -filter
+.gitchunk/chunks.txt -filter text eol=lf diff

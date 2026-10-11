@@ -1,3 +1,0 @@
-# Unity assets
-Assets/**
-!Assets/Small/**

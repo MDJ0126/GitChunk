@@ -22,6 +22,10 @@ brew install --cask MDJ0126/gitchunk/git-chunk
 
 ## Use
 
+Run `git chunk update` at the repository root to download the latest release, verify its checksum, and apply it to that repository. Subsequent `git chunk` commands forward to the verified new executable. Apply it to other repositories with `git chunk install`. Use `git chunk version` to inspect the executable and version.
+
+`git chunk install` applies the running version and reports a newer release when available. Versions without the updater require a one-time upgrade through the installer or package manager first. Unpublished local changes are not downloaded from public releases.
+
 Run once in your project's Git repository root, including after cloning on a new PC:
 
 ```bash
@@ -68,3 +72,5 @@ Save `git lfs ls-files --all --long` **before** removing the old history to obta
 v1.1.1 also converts existing large ordinary Git files during LFS migration and batches LFS pointer discovery. This covers mixed repositories containing both LFS resources and large build files.
 
 [Distribution details](Packaging/README.md) · [Technical notes](INSTRUCTIONS.md)
+
+`.gitchunk/chunks.txt` lists original paths (JSON strings) and ordered chunk IDs. Installation rebuilds it from existing indexed pointers; the commit hook refreshes and stages it from staged files, including renames and deletions. Restoration still uses the original pointers. Updates archive old presets under the Git metadata directory.

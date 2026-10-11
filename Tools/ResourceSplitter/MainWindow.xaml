@@ -22,25 +22,20 @@
   </Border>
   <Border Grid.Row="2" Background="White" CornerRadius="12" BorderBrush="#E0E6EF" BorderThickness="1" Padding="20">
    <Grid x:Name="Modes">
-    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
     <TextBlock Text="Chunk rules" FontWeight="Bold"/>
     <TextBlock Grid.Row="1" Text="One pattern per line · * and ** supported · ! excludes · last match wins" Foreground="#64748B" FontSize="11" Margin="0,7,0,10"/>
     <TextBox x:Name="RulesEditor" Grid.Row="2" AcceptsReturn="True" AcceptsTab="True" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" FontFamily="Consolas" FontSize="13" MinHeight="100" TextChanged="RulesChanged"/>
-    <DockPanel Grid.Row="3" Margin="0,12,0,8">
-     <Button DockPanel.Dock="Right" Content="Save rules" Click="SaveRules" Margin="8,0,0,0"/>
-     <Button DockPanel.Dock="Right" Content="Load" Click="LoadPreset"/>
-     <ComboBox x:Name="PresetList" MinWidth="170" Padding="8" IsEditable="False"/>
-    </DockPanel>
-    <DockPanel Grid.Row="4">
-     <Button DockPanel.Dock="Right" Content="Save preset" Click="SavePreset" Margin="8,0,0,0"/>
-     <TextBox x:Name="PresetName" ToolTip="Preset name, e.g. my-project" Text="my-project"/>
-    </DockPanel>
+    <Button Grid.Row="3" Content="Save rules" Click="SaveRules" HorizontalAlignment="Right" Margin="0,12,0,0"/>
    </Grid>
   </Border>
   <Grid Grid.Row="3" Margin="0,16,0,16">
    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-   <StackPanel VerticalAlignment="Center"><TextBlock x:Name="StatusText" Text="Ready" FontWeight="Bold"/><TextBlock Text="Files over 50 MiB → 49 MiB chunks · local originals preserved" Foreground="#64748B" FontSize="11" Margin="0,5,0,0"/><ProgressBar x:Name="Progress" Height="3" Width="180" HorizontalAlignment="Left" Visibility="Collapsed" Margin="0,7,0,0"/></StackPanel>
-   <Button x:Name="RunButton" Grid.Column="1" Content="Install Git Chunk  →" Click="Execute" Background="#2864EB" Foreground="White" BorderBrush="#2864EB" Padding="22,12" Margin="12,0,0,0" FontWeight="Bold"/>
+   <StackPanel VerticalAlignment="Center"><TextBlock x:Name="StatusText" Text="Ready" FontWeight="Bold" TextWrapping="Wrap"/><TextBlock Text="Files over 50 MiB → 49 MiB chunks · local originals preserved" TextWrapping="Wrap" Foreground="#64748B" FontSize="11" Margin="0,5,0,0"/><ProgressBar x:Name="Progress" Height="3" Width="180" HorizontalAlignment="Left" Visibility="Collapsed" Margin="0,7,0,0"/></StackPanel>
+   <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="12,0,0,0">
+    <Button Content="Update to latest" Click="UpdateLatest" IsEnabled="{Binding IsEnabled, ElementName=RunButton}" Margin="0,0,8,0"/>
+    <Button x:Name="RunButton" Content="Install Git Chunk  →" Click="Execute" Background="#2864EB" Foreground="White" BorderBrush="#2864EB" Padding="16,12" Margin="0" FontWeight="Bold"/>
+   </StackPanel>
   </Grid>
   <Border Grid.Row="4" Background="White" CornerRadius="12" BorderBrush="#E0E6EF" BorderThickness="1" Padding="16,12">
    <DockPanel><DockPanel DockPanel.Dock="Top" Margin="0,0,0,8"><Button DockPanel.Dock="Right" Content="Copy log" Click="CopyLog" FontSize="11" Padding="8,3" Margin="0"/><TextBlock Text="Activity log" FontWeight="Bold"/></DockPanel><TextBox x:Name="Log" IsReadOnly="True" BorderThickness="0" FontFamily="Consolas" FontSize="11" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" Foreground="#53657F" Padding="0"/></DockPanel>

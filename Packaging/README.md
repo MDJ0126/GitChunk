@@ -4,6 +4,8 @@ Run the **Publish Git Chunk** GitHub Actions workflow from `main` with a version
 
 Users need Git, but no .NET SDK. The Windows setup adds a Start menu entry and registers `git chunk` on the user PATH without administrator permissions. Open a new terminal after installation. Uninstall leaves repository configuration and data untouched; its PATH entry remains harmless and can be removed manually.
 
+The next release adds `git chunk update`: it downloads and verifies the latest release, applies it to the current repository, and records a user-local command cache. Existing updater-aware commands then forward to the new executable without modifying package-manager files. Older released commands need a one-time installer/package upgrade to gain this feature. `install` applies the running version and checks for newer releases; `version` prints the actual executable. Publishing must stamp the release version into both GUI and CLI builds. The source default 1.2.0 is an upcoming version, not evidence that it has been released.
+
 v1.1.0 is published and includes automatic conversion of current Git LFS files. With the package manager already installed:
 
 ```powershell

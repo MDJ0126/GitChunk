@@ -38,8 +38,7 @@ with tempfile.TemporaryDirectory(prefix='GitChunk-rules-') as temp:
         assert backups and (backups[0] / 'user-note.txt').read_text() == 'retain unknown legacy files'
     policy = '# 커스텀 Unicode policy\nAssets/**/*.bmp\n*.wav\n!Assets/Small/**\n'.encode('utf-8')
     run(root, tool, 'git-rules-save', str(root), data=policy)
-    run(root, tool, 'git-preset-save', str(root), 'custom-test', data=policy)
-    assert run(root, tool, 'git-preset-read', str(root), 'custom-test') == policy
+    assert not (root / '.gitchunk/presets').exists()
     for name, expected_match in [('Assets/picture.bmp','include'), ('Assets/deep/picture.bmp','include'), ('Assets/Small/picture.bmp','exclude'), ('other/picture.bmp','exclude'), ('sound.wav','include'), ('.gitchunk/test.wav','exclude'), ('Assets/picture.bmp.meta','exclude')]:
         assert run(root, tool, 'git-rules-match', str(root), name).strip().decode() == expected_match, name
     excluded = root / 'Assets' / 'Small' / 'skip.bmp'; large(excluded)
@@ -55,6 +54,22 @@ with tempfile.TemporaryDirectory(prefix='GitChunk-rules-') as temp:
     files = run(root, 'git', 'ls-tree', '-r', '--name-only', 'HEAD')
     assert b'.gitchunk/objects/' in files and b'.resourcesplitter/objects/' not in files
     assert not run(root, 'git', 'status', '--porcelain')
+    import json
+    pointer = json.loads(run(root, 'git', 'show', 'HEAD:Assets/한글 picture.bmp').split(b'\n', 1)[1])
+    listing = (root / '.gitchunk/chunks.txt').read_text(encoding='utf-8')
+    assert 'Assets/한글 picture.bmp' in json.loads(listing.splitlines()[3][1:-1])
+    for i, chunk in enumerate(pointer['Chunks'], 1):
+        assert f'{i:06d} = {chunk["Oid"]}' in listing
+    # Reinstall must rebuild the list from existing pointers without changing them.
+    (root / '.gitchunk/chunks.txt').unlink()
+    presets = root / '.gitchunk/presets'; presets.mkdir()
+    (presets / 'custom.txt').write_bytes(policy)
+    run(root, tool, 'git-install', str(root))
+    assert (root / '.gitchunk/chunks.txt').read_text(encoding='utf-8') == listing
+    assert run(root, 'git', 'show', 'HEAD:Assets/한글 picture.bmp').split(b'\n', 1)[1] == json.dumps(pointer, separators=(',', ':')).encode() + b'\n'
+    assert sha(asset) == expected
+    assert not presets.exists()
+    assert any((p / 'custom.txt').read_bytes() == policy for p in (root / '.git/gitchunk').glob('presets-backup-*'))
     # The active binary lives under .git, surviving a historical checkout.
     if old_commit:
         run(root, 'git', 'checkout', old_commit)
@@ -69,7 +84,7 @@ with tempfile.TemporaryDirectory(prefix='GitChunk-rules-') as temp:
     run(root, 'git', 'clone', '--branch', 'main', str(remote), str(reader))
     run(reader, tool, 'git-install', str(reader))
     assert sha(reader / 'Assets' / '한글 picture.bmp') == expected
-    assert (reader / '.gitchunk/presets/custom-test.txt').read_bytes() == policy
+    assert (reader / '.gitchunk/chunks.txt').read_text(encoding='utf-8') == listing
     assert not run(reader, 'git', 'status', '--porcelain')
     run(reader, 'git', 'gc', '--prune=now')
     if old_commit:
@@ -80,4 +95,6 @@ with tempfile.TemporaryDirectory(prefix='GitChunk-rules-') as temp:
     run(reader, tool, 'git-rules-save', str(reader), data=b'!**\n')
     run(reader, 'git', 'add', '--renormalize', 'Assets/한글 picture.bmp')
     assert run(reader, 'git', 'cat-file', '-s', ':Assets/한글 picture.bmp').strip() == b'62914560'
-print('PASS: ordered rules, glob paths, exclusions, presets, normal blobs, clone, policy changes, legacy history and GC')
+    run(reader, tool, 'git-prepare')
+    assert '000001' not in (reader / '.gitchunk/chunks.txt').read_text(encoding='utf-8')
+print('PASS: rules, chunk list, reinstall, preset backup, normal blobs, clone, policy changes, history and GC')

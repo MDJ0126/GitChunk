@@ -1,5 +1,7 @@
 Tools/ResourceSplitter/bin/
 Tools/ResourceSplitter/obj/
+Tools/ResourceSplitter/Tests/**/bin/
+Tools/ResourceSplitter/Tests/**/obj/
 /dist/
 /publish/
 /packages/

@@ -23,5 +23,5 @@ chmod +x "$install_dir/git-chunk"
 "$install_dir/git-chunk" install "$repo"
 echo "Installed command: $install_dir/git-chunk"
 echo "Add this directory to PATH if needed: export PATH=\"$install_dir:\$PATH\""
-echo 'Use: git chunk install / git chunk status / git chunk rules'
+echo 'Use: git chunk install / git chunk update / git chunk version / git chunk status / git chunk rules'
 echo "Build files retained at: $work"

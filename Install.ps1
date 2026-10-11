@@ -41,6 +41,6 @@ if (-not $NoPathChanges) {
     if ($installRoot -notin @($env:Path -split ';')) { $env:Path = $installRoot + ';' + $env:Path }
 }
 Write-Host "Installed command: $command"
-Write-Host 'Use: git chunk install / git chunk status / git chunk rules'
+Write-Host 'Use: git chunk install / git chunk update / git chunk version / git chunk status / git chunk rules'
 Write-Host 'Open a new terminal to pick up the persistent PATH change.'
 Write-Host "Build files retained at: $work"

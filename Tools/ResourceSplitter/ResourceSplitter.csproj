@@ -12,6 +12,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AssemblyName>GitChunk</AssemblyName>
+    <Version>1.2.0</Version>
     <Product>Git Chunk</Product>
     <Description>Git-native chunk storage for large files</Description>
     <SelfContained>true</SelfContained>
@@ -24,6 +25,7 @@
     <Resource Include="Assets/AppIcon.png"/>
     <Resource Include="Assets/AppIcon.ico"/>
   </ItemGroup>
+  <ItemGroup><Compile Remove="Tests/**/*.cs" /></ItemGroup>
   <ItemGroup Condition="'$(WindowsBuild)' != 'True'">
     <Compile Remove="MainWindow.xaml.cs"/>
     <Page Remove="MainWindow.xaml"/>

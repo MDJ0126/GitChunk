@@ -1,3 +1,0 @@
-# Only matching files larger than 50 MiB are chunked.
-# One pattern per line. ! excludes; the last matching rule wins.
-*
