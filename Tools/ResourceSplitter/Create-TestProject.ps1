@@ -50,10 +50,10 @@ TextFile '테스트방법.txt' @'
 현재 상태: 원본 파일 상태. 1번/2번과 3번은 같은 포인터·조각 형식을 사용합니다.
 
 수동 분할·복원 시험 (C:/Projects/ResourceSplitter 폴더에서 실행):
-  ./ResourceSplitter.exe split ./TestProject
-  ./ResourceSplitter.exe join ./TestProject
+  ./ResourceSplitter.exe split ./TestProject | Out-Host
+  ./ResourceSplitter.exe join ./TestProject | Out-Host
 
-EXE 메뉴에서는 대상 경로 C:/Projects/ResourceSplitter/TestProject를 입력하고 1번 분할, 2번 복원을 선택합니다.
+GUI에서 C:/Projects/ResourceSplitter/TestProject 폴더를 선택하고 파일 분할 / 원본 복원 카드를 선택한 뒤 실행합니다.
 분할 후 60 MiB 파일은 작은 복원 정보로 바뀌며 실제 데이터는 49 MiB + 11 MiB 조각으로 저장됩니다.
 Git 루트의 .resourcesplitter/objects/에 조각이 저장됩니다. .meta는 그대로 유지됩니다.
 정확히 50 MiB인 파일, 50 MiB보다 1바이트 작은 파일, 작은 텍스트와 빈 파일은 분할하지 않습니다.

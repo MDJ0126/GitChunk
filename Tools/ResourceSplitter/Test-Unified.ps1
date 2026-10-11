@@ -2,7 +2,7 @@ $ErrorActionPreference = 'Stop'
 $exe = (Resolve-Path (Join-Path $PSScriptRoot '../../ResourceSplitter.exe')).Path
 $fixture = Join-Path $PSScriptRoot ('bin/unified-test-' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path (Join-Path $fixture 'Assets') -Force | Out-Null
-function E { & $exe @args; if ($LASTEXITCODE -ne 0) { throw "Tool failed: $args" } }
+function E { & $exe @args | Out-Host; if ($LASTEXITCODE -ne 0) { throw "Tool failed: $args" } }
 function G { & git @args; if ($LASTEXITCODE -ne 0) { throw "Git failed: $args" } }
 Push-Location $fixture
 try {
@@ -23,7 +23,7 @@ try {
     $chunkPath = Join-Path $fixture ('.resourcesplitter/objects/' + $p.Chunks[0].Oid)
     $chunkBytes = [IO.File]::ReadAllBytes($chunkPath)
     [IO.File]::WriteAllText($chunkPath,'corrupt')
-    & $exe join $fixture
+    & $exe join $fixture | Out-Host
     if ($LASTEXITCODE -eq 0 -or (Get-Item $asset).Length -ne $pointer.Length) { throw 'Corrupt restore changed pointer' }
     [IO.File]::WriteAllBytes($chunkPath,$chunkBytes)
     # Moving a pointer preserves restoration at its new path.

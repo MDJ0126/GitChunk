@@ -1,0 +1,50 @@
+name: Build Windows and Mac
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+      - name: Build Windows GUI
+        run: dotnet publish Tools/ResourceSplitter/ResourceSplitter.csproj -c Release -r win-x64 -o publish/windows
+      - name: Test Windows data and Git
+        shell: pwsh
+        run: |
+          Copy-Item publish/windows/ResourceSplitter.exe ResourceSplitter.exe -Force
+          ./Tools/ResourceSplitter/Test-Unified.ps1
+          ./Tools/ResourceSplitter/Test-Git.ps1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ResourceSplitter-Windows
+          path: publish/windows/ResourceSplitter.exe
+  mac:
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - rid: osx-arm64
+            runner: macos-latest
+          - rid: osx-x64
+            runner: macos-15-intel
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+      - name: Build macOS app
+        run: bash Tools/ResourceSplitter/Mac/Build.sh ${{ matrix.rid }}
+      - name: Test native Mac core
+        run: |
+          python3 Tools/ResourceSplitter/Mac/Test.py "Tools/ResourceSplitter/bin/mac/${{ matrix.rid }}/ResourceSplitter.app/Contents/MacOS/ResourceSplitter-cli"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ResourceSplitter-Mac-${{ matrix.rid }}
+          path: Tools/ResourceSplitter/bin/mac/${{ matrix.rid }}/ResourceSplitter-${{ matrix.rid }}.zip

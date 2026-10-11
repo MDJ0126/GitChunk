@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Runtime.InteropServices;
 
 // The original path stores a small pointer in Git; chunk blobs are ordinary Git files.
 // Reading chunks by blob ID makes checkout independent of file checkout order.
@@ -12,6 +13,8 @@ static class GitIntegration
     const int ChunkSize = 49 * 1024 * 1024;
     const string Prefix = "resourcesplitter-pointer-v1\n";
     const string Store = ".resourcesplitter/objects/";
+    static string InstalledToolName => OperatingSystem.IsWindows() ? "ResourceSplitter.exe" : "ResourceSplitter-osx-" + (RuntimeInformation.ProcessArchitecture == Architecture.Arm64 ? "arm64" : "x64");
+    static bool ToolPath(string path) => path is "ResourceSplitter.exe" or ".resourcesplitter/ResourceSplitter.exe" or "ResourceSplitter-osx-arm64" or "ResourceSplitter-osx-x64" or ".resourcesplitter/ResourceSplitter-osx-arm64" or ".resourcesplitter/ResourceSplitter-osx-x64";
     record Chunk(string Oid, int Size, string Sha256);
     record Pointer(long Size, string Sha256, List<Chunk> Chunks);
 
@@ -122,7 +125,7 @@ static class GitIntegration
     static string SafePath(string root, string relative)
     {
         var path = Path.GetFullPath(Path.Combine(root, relative));
-        if (!path.StartsWith(Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)) throw new Exception("Path outside project.");
+        if (!path.StartsWith(Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar, FileSystemPaths.Comparison)) throw new Exception("Path outside project.");
         for (var current = path; current != null && current.Length >= Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar).Length; current = Path.GetDirectoryName(current))
         {
             if ((File.Exists(current) || Directory.Exists(current)) && (File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0) throw new Exception("Symbolic link/junction is not supported: " + current);
@@ -258,14 +261,15 @@ static class GitIntegration
         var chunks = new Dictionary<string, Chunk>();
         var entries = Encoding.UTF8.GetString(Git(null, "ls-files", "--stage", "-z")).Split('\0', StringSplitOptions.RemoveEmptyEntries);
         var existing = new HashSet<string>();
-        var candidates = new Dictionary<string, string>();
+        var candidates = new Dictionary<string, List<string>>();
         foreach (var entry in entries)
         {
             var tab = entry.IndexOf('\t'); var fields = entry[..tab].Split(' '); var path = entry[(tab + 1)..];
             if (fields[2] != "0") throw new Exception("Resolve merge conflicts before committing.");
             if (path.StartsWith(Store, StringComparison.Ordinal)) { existing.Add(path); continue; }
             if (fields[0] == "160000") continue;
-            candidates[fields[1]] = path;
+            if (!candidates.TryGetValue(fields[1], out var paths)) candidates[fields[1]] = paths = new List<string>();
+            paths.Add(path);
         }
         var report = candidates.Count == 0 ? "" : Encoding.UTF8.GetString(Git(Encoding.ASCII.GetBytes(string.Join("\n", candidates.Keys) + "\n"), "cat-file", "--batch-check=%(objectname) %(objecttype) %(objectsize)"));
         var small = new List<string>();
@@ -274,7 +278,8 @@ static class GitIntegration
             var fields = item.Split(' ');
             if (fields.Length != 3 || fields[1] != "blob") throw new Exception("Invalid staged blob.");
             var size = long.Parse(fields[2]);
-            if (size > Threshold) throw new Exception("Large raw blob is staged: " + candidates[fields[0]] + ". Check attributes and run git add again.");
+            if (size > Threshold && !(size < 100L * 1024 * 1024 && candidates[fields[0]].All(ToolPath)))
+                throw new Exception("Large raw blob is staged: " + string.Join(", ", candidates[fields[0]]) + ". Check attributes and run git add again.");
             if (size <= 1024 * 1024) small.Add(fields[0]);
         }
         foreach (var p in Pointers(small).Values)
@@ -319,7 +324,9 @@ static class GitIntegration
             if (!Oid(fields[1]) || !Oid(fields[3])) throw new Exception("Invalid push ref.");
             var args = new List<string> { "rev-list", "--objects", fields[1] };
             // Validate the complete pushed history, including pre-existing raw large blobs.
-            var objects = Text(args.ToArray()).Split('\n', StringSplitOptions.RemoveEmptyEntries).Select(s => s.Split(' ')[0]).Distinct().ToList();
+            var objectLines = Text(args.ToArray()).Split('\n', StringSplitOptions.RemoveEmptyEntries);
+            var tools = objectLines.Where(s => s.IndexOf(' ') is var space && space > 0 && ToolPath(s[(space + 1)..])).Select(s => s.Split(' ')[0]).ToHashSet();
+            var objects = objectLines.Select(s => s.Split(' ')[0]).Distinct().ToList();
             var reachable = objects.ToHashSet();
             var report = Encoding.UTF8.GetString(Git(Encoding.ASCII.GetBytes(string.Join("\n", objects) + "\n"), "cat-file", "--batch-check=%(objectname) %(objecttype) %(objectsize)"));
             var small = new List<string>();
@@ -327,7 +334,7 @@ static class GitIntegration
             {
                 var f = item.Split(' '); if (f.Length != 3 || f[1] != "blob") continue;
                 var size = long.Parse(f[2]);
-                if (size > Threshold) throw new Exception("Push contains a raw blob exceeding 50 MiB: " + f[0] + ". Existing history must be migrated separately.");
+                if (size > Threshold && !(size < 100L * 1024 * 1024 && tools.Contains(f[0]))) throw new Exception("Push contains a raw blob exceeding 50 MiB: " + f[0] + ". Existing history must be migrated separately.");
                 if (size > 1024 * 1024) continue;
                 small.Add(f[0]);
             }
@@ -339,7 +346,7 @@ static class GitIntegration
     {
         Directory.SetCurrentDirectory(Path.GetFullPath(root));
         var actual = Path.GetFullPath(Text("rev-parse", "--show-toplevel"));
-        if (!actual.Equals(Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar), StringComparison.OrdinalIgnoreCase)) throw new Exception("Specify the Git repository root.");
+        if (!actual.Equals(Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar), FileSystemPaths.Comparison)) throw new Exception("Specify the Git repository root.");
         var hooks = Path.GetFullPath(Text("rev-parse", "--git-path", "hooks"));
         Directory.CreateDirectory(hooks);
         foreach (var name in new[] { "pre-commit", "pre-push" })
@@ -347,11 +354,12 @@ static class GitIntegration
             var path = Path.Combine(hooks, name);
             if (File.Exists(path) && !File.ReadAllText(path).Contains("# ResourceSplitter managed hook")) throw new Exception("Existing hook must be integrated manually: " + path);
         }
-        var tool = Path.Combine(actual, ".resourcesplitter", "ResourceSplitter.exe");
+        var tool = Path.Combine(actual, ".resourcesplitter", InstalledToolName);
         if (Directory.Exists(Path.GetDirectoryName(tool)) && (File.GetAttributes(Path.GetDirectoryName(tool)!) & FileAttributes.ReparsePoint) != 0) throw new Exception("Tool directory cannot be a symbolic link/junction.");
         Directory.CreateDirectory(Path.GetDirectoryName(tool)!);
         var source = Environment.ProcessPath ?? throw new Exception("Executable path unavailable.");
-        if (!source.Equals(tool, StringComparison.OrdinalIgnoreCase)) File.Copy(source, tool, true);
+        if (!source.Equals(tool, FileSystemPaths.Comparison)) File.Copy(source, tool, true);
+        if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(tool, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute | UnixFileMode.GroupRead | UnixFileMode.GroupExecute | UnixFileMode.OtherRead | UnixFileMode.OtherExecute);
         var attributes = Path.Combine(actual, ".gitattributes");
         var old = File.Exists(attributes) ? File.ReadAllText(attributes) : "";
         if (!old.Contains("# ResourceSplitter automatic storage")) File.AppendAllText(attributes,
@@ -359,17 +367,21 @@ static class GitIntegration
         var ignore = Path.Combine(actual, ".gitignore");
         if (!File.Exists(ignore) || !File.ReadAllText(ignore).Contains("/.resourcesplitter/objects/"))
             File.AppendAllText(ignore, "\n# ResourceSplitter chunk cache (required chunks are staged by the hook)\n/.resourcesplitter/objects/\n", new UTF8Encoding(false));
-        Text("config", "--local", "filter.resourcesplitter.clean", "\".resourcesplitter/ResourceSplitter.exe\" git-clean");
-        Text("config", "--local", "filter.resourcesplitter.smudge", "\".resourcesplitter/ResourceSplitter.exe\" git-smudge");
+        Text("config", "--local", "filter.resourcesplitter.clean", "\".resourcesplitter/" + InstalledToolName + "\" git-clean");
+        Text("config", "--local", "filter.resourcesplitter.smudge", "\".resourcesplitter/" + InstalledToolName + "\" git-smudge");
         Text("config", "--local", "filter.resourcesplitter.required", "true");
         foreach (var (name, command) in new[] { ("pre-commit", "git-prepare"), ("pre-push", "git-check-push") })
-            File.WriteAllText(Path.Combine(hooks, name), "#!/bin/sh\n# ResourceSplitter managed hook\nexec \".resourcesplitter/ResourceSplitter.exe\" " + command + "\n", new UTF8Encoding(false));
+        {
+            var hook = Path.Combine(hooks, name);
+            File.WriteAllText(hook, "#!/bin/sh\n# ResourceSplitter managed hook\nexec \".resourcesplitter/" + InstalledToolName + "\" " + command + "\n", new UTF8Encoding(false));
+            if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(hook, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute | UnixFileMode.GroupRead | UnixFileMode.GroupExecute | UnixFileMode.OtherRead | UnixFileMode.OtherExecute);
+        }
         // On first clone Git has not yet installed the local filter. Restore only
         // exact pointer files, leaving existing edits and missing files untouched.
         foreach (var relative in Encoding.UTF8.GetString(Git(null, "ls-files", "-z")).Split('\0', StringSplitOptions.RemoveEmptyEntries))
         {
             var path = Path.GetFullPath(Path.Combine(actual, relative));
-            if (!path.StartsWith(actual + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)) throw new Exception("Invalid tracked path.");
+            if (!path.StartsWith(actual + Path.DirectorySeparatorChar, FileSystemPaths.Comparison)) throw new Exception("Invalid tracked path.");
             if (!File.Exists(path) || new FileInfo(path).Length > 1024 * 1024) continue;
             var current = File.ReadAllBytes(path);
             if (Parse(current) == null) continue;

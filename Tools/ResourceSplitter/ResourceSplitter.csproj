@@ -1,15 +1,23 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net9.0</TargetFramework>
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-x64</RuntimeIdentifier>
+    <WindowsBuild>$([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('win-'))</WindowsBuild>
+    <OutputType Condition="'$(WindowsBuild)' == 'True'">WinExe</OutputType>
+    <OutputType Condition="'$(WindowsBuild)' != 'True'">Exe</OutputType>
+    <TargetFramework Condition="'$(WindowsBuild)' == 'True'">net9.0-windows</TargetFramework>
+    <TargetFramework Condition="'$(WindowsBuild)' != 'True'">net9.0</TargetFramework>
+    <UseWPF Condition="'$(WindowsBuild)' == 'True'">true</UseWPF>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AssemblyName>ResourceSplitter</AssemblyName>
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <SelfContained>true</SelfContained>
     <PublishSingleFile>true</PublishSingleFile>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
     <DebugType>embedded</DebugType>
   </PropertyGroup>
+  <ItemGroup Condition="'$(WindowsBuild)' != 'True'">
+    <Compile Remove="MainWindow.xaml.cs"/>
+    <None Remove="MainWindow.xaml"/>
+  </ItemGroup>
 </Project>

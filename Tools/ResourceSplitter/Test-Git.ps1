@@ -3,7 +3,7 @@ $exe = (Resolve-Path (Join-Path $PSScriptRoot '../../ResourceSplitter.exe')).Pat
 $fixture = Join-Path $PSScriptRoot ('bin/git-test-' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $fixture | Out-Null
 function G { & git @args; if ($LASTEXITCODE -ne 0) { throw "git failed: $args" } }
-function E { & $exe @args; if ($LASTEXITCODE -ne 0) { throw "ResourceSplitter failed: $args" } }
+function E { & $exe @args | Out-Host; if ($LASTEXITCODE -ne 0) { throw "ResourceSplitter failed: $args" } }
 function Identity { G config user.name Test; G config user.email test@example.invalid }
 function AssertHash($path,$expected) { if ((Get-FileHash $path).Hash -ne $expected) { throw "Hash mismatch: $path" } }
 Push-Location $fixture
@@ -14,7 +14,7 @@ try {
     Identity
     E git-install (Get-Location).Path
     Set-Content .git/hooks/pre-commit '# custom hook'
-    & $exe git-install (Get-Location).Path
+    & $exe git-install (Get-Location).Path | Out-Host
     if ($LASTEXITCODE -eq 0 -or (Get-Content .git/hooks/pre-commit -Raw) -notlike '*custom hook*') { throw 'Existing hook was overwritten' }
     Remove-Item .git/hooks/pre-commit
     E git-install (Get-Location).Path

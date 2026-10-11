@@ -19,7 +19,7 @@ class Program
     {
         if (string.IsNullOrWhiteSpace(relative) || Path.IsPathRooted(relative)) throw new Exception("Invalid relative path.");
         var full = Path.GetFullPath(Path.Combine(root, relative));
-        if (!full.StartsWith(Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+        if (!full.StartsWith(Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar, FileSystemPaths.Comparison))
             throw new Exception("Path escapes project: " + relative);
         // Never traverse symbolic links or junctions when reading/writing resources.
         var current = full;
@@ -82,7 +82,7 @@ class Program
     {
         var manifestPath = Inside(root, "ResourceSplitter.manifest.json");
         if (File.Exists(manifestPath)) throw new Exception("Inline parts already exist; restore them before splitting again.");
-        var files = Resources(root, LoadSettings(root)).Distinct(StringComparer.OrdinalIgnoreCase)
+        var files = Resources(root, LoadSettings(root)).Distinct(FileSystemPaths.Comparer)
             .Where(path => new FileInfo(path).Length > 50L * 1024 * 1024)
             .OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToList();
         if (files.Count == 0)
@@ -194,7 +194,7 @@ class Program
         var output = inline ? root : Inside(root, "ResourceParts");
         var manifest = JsonSerializer.Deserialize<Manifest>(File.ReadAllText(inline ? inlineManifest : Inside(output, "manifest.json"))) ?? throw new Exception("Invalid manifest.");
         if ((inline ? manifest.Version is not (2 or 3) : manifest.Version != 1) || manifest.Files == null || manifest.Files.Count == 0) throw new Exception("Unsupported/empty manifest.");
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var seen = new HashSet<string>(FileSystemPaths.Comparer);
         // Validate every part and destination before restoring any file.
         foreach (var asset in manifest.Files)
         {
@@ -203,7 +203,7 @@ class Program
                 throw new Exception("Invalid asset entry: " + asset.Path);
             if (Reserved(Path.GetRelativePath(root, target))) throw new Exception("Protected destination: " + asset.Path);
             bool protectedMeta = manifest.Version == 3 && asset.Path.EndsWith(".meta", StringComparison.OrdinalIgnoreCase);
-            if (protectedMeta && !manifest.Files.Any(other => other.Path.Equals(asset.Path[..^5], StringComparison.OrdinalIgnoreCase)))
+            if (protectedMeta && !manifest.Files.Any(other => other.Path.Equals(asset.Path[..^5], FileSystemPaths.Comparison)))
                 throw new Exception("Metadata has no paired asset: " + asset.Path);
             if (!protectedMeta && File.Exists(target) && (new FileInfo(target).Length != asset.Size || Hash(target) != asset.Sha256))
                 throw new Exception("Existing file differs; move it to a backup before restoring: " + asset.Path);
@@ -253,7 +253,20 @@ class Program
         }
         Console.WriteLine("Restore complete. All hashes verified.");
     }
+    [STAThread]
     static int Main(string[] args)
+    {
+#if WINDOWS
+        if (args.Length == 0) return new System.Windows.Application().Run(new MainWindow());
+        if (args[0] == "ui-preview" && args.Length == 2) return MainWindow.Preview(args[1]);
+        if (args[0] == "ui-smoke" && args.Length == 2) return MainWindow.Smoke(args[1]);
+        ConsoleHost.AttachIfNeeded();
+#else
+        Console.OutputEncoding = new System.Text.UTF8Encoding(false);
+#endif
+        return RunCommand(args);
+    }
+    internal static int RunCommand(string[] args)
     {
         bool interactive = args.Length == 0;
         try
@@ -287,7 +300,7 @@ class Program
             if (mode is "1" or "split")
             {
                 if (File.Exists(Inside(root, "ResourceSplitter.manifest.json"))) throw new Exception("Restore legacy .part files before splitting.");
-                GitIntegration.ManualSplit(root, Resources(root, LoadSettings(root)).Distinct(StringComparer.OrdinalIgnoreCase), (int)chunk);
+                GitIntegration.ManualSplit(root, Resources(root, LoadSettings(root)).Distinct(FileSystemPaths.Comparer), (int)chunk);
             }
             else if (mode is "2" or "join")
             {

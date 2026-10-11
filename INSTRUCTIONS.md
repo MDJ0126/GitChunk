@@ -1,5 +1,7 @@
 # 사용 지시사항
 
+EXE를 더블클릭하면 Windows GUI가 열립니다. 폴더 선택/드래그, 작업 카드 선택, 실행, 진행 상태 및 로그 복사를 지원합니다. 이하 1·2·3번은 GUI의 파일 분할·원본 복원·Git 자동화 카드에 해당합니다. 처리 중에는 다른 작업과 창 종료를 막아 파일 작업이 중단되지 않도록 합니다.
+
 ## 저장 형식
 
 1번/2번 수동 모드와 3번 Git 자동화는 모두 `resourcesplitter-pointer-v1` 형식을 사용합니다. 원래 파일 경로에는 크기, SHA-256, 조각 ID와 순서를 담은 작은 복원 정보가 저장되며, 실제 바이트는 `.resourcesplitter/objects/`에 저장됩니다.
@@ -15,10 +17,10 @@
 ## 수동 모드
 
 ```powershell
-./ResourceSplitter.exe split C:/path/to/project
-./ResourceSplitter.exe join C:/path/to/project
+./ResourceSplitter.exe split C:/path/to/project | Out-Host
+./ResourceSplitter.exe join C:/path/to/project | Out-Host
 # 조각 크기 바이트 (최대 49 MiB)
-./ResourceSplitter.exe split C:/path/to/project 1024
+./ResourceSplitter.exe split C:/path/to/project 1024 | Out-Host
 ```
 
 수동 모드 설정은 `ResourceSplitter.settings.json`입니다. IncludePaths는 프로젝트 기준 상대 경로이며 기본은 전체(`.`)입니다. ExcludeDirectories는 Library, Temp, Obj, Logs, UserSettings, DerivedDataCache, Intermediate, Saved, Binaries, node_modules, .vs, .idea, .venv, venv, bin, obj를 기본 제외합니다. ExcludeFilePatterns는 파일명 와일드카드이며 기본은 `*.restore-*`입니다.
@@ -53,3 +55,5 @@ Windows x64와 PATH에서 실행 가능한 Git이 필요합니다. Git for Windo
 - Test-Unified.ps1: 수동/자동 동일 포인터, 조각 손상 보호, 파일 이동, .meta 유지, 조각 유지, 수동 결과 커밋.
 - Test-Git.ps1: push/clone/pull/rebase/checkout, GC, stash+GC, 스테이징 이후 수정 보호, 로컬 수정 덮어쓰기 차단, 경계 크기, 훅 충돌, 커밋/푸시 원본 차단.
 - Test.ps1: 이전 .part/manifest 형식과 .meta 복원 호환성.
+
+PowerShell에서 GUI EXE를 명령행으로 실행할 때는 출력과 종료 대기를 위해 | Out-Host를 붙입니다. 도구 자체는 GUI 런타임을 포함해 50 MiB를 넘을 수 있으므로 두 도구 경로(ResourceSplitter.exe와 .resourcesplitter/ResourceSplitter.exe)에 한해 100 MiB 미만 원본 저장을 허용합니다. 일반 리소스의 50 MiB 초과 차단은 유지합니다.
