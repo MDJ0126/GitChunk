@@ -6,7 +6,7 @@ Store large files as chunks in ordinary Git. Install once per repository and com
 
 ## Windows app
 
-For ready-to-install distribution (no SDK), see [binary installers and package managers](Packaging/README.md). The new **Publish Git Chunk** workflow builds a Windows setup installer and Homebrew/Scoop package feeds. These download and package commands become available after the first successful release.
+For ready-to-install distribution (no SDK), download the [Windows installer or Mac app](https://github.com/MDJ0126/GitChunk/releases/latest), or use [Scoop and Homebrew](Packaging/README.md). Windows, Apple Silicon and Intel Mac builds are published starting with v1.0.0.
 
 Run **GitChunk.exe**, select the repository root, edit your chunk rules or load a preset, and click **Install Git Chunk**. The UI defaults to English and shows installation status. An installed repository offers **Update / Reinstall**.
 
@@ -64,7 +64,7 @@ git chunk status
 
 Add the PATH line to your shell profile if needed. The installer builds the native Apple Silicon or Intel CLI; no SwiftUI app build is required. `GITCHUNK_SOURCE` can point to a local checkout, and `GITCHUNK_INSTALL_DIR` overrides the command directory. The Mac installer and GUI still require execution verification on an actual Mac.
 
-The download commands above become available **after these scripts are committed and pushed**. No GitHub Release, Homebrew or winget package has been published as part of this change.
+These source-build scripts remain available for development. For ordinary installation, use the published release or the project's Scoop/Homebrew feed. There is no public winget or Homebrew core registry entry.
 
 ## Rules and presets
 

@@ -1,6 +1,6 @@
 # Git Chunk
 
-빌드 없이 설치할 일반 사용자용 Windows 설치 프로그램 및 Scoop·Homebrew 배포 구성을 추가했습니다. [배포 방법](Packaging/README.md)을 참고하세요. 패키지 설치 명령은 첫 릴리스가 정상 배포된 뒤 사용할 수 있습니다.
+빌드 없이 설치할 일반 사용자용 Windows 설치 프로그램과 Mac 앱을 [v1.0.0부터 배포](https://github.com/MDJ0126/GitChunk/releases/latest)합니다. Scoop·Homebrew 명령어 설치는 [배포 방법](Packaging/README.md)을 참고하세요. 사용자 PC에 .NET SDK는 필요 없습니다.
 
 [English](README.md) · **한국어**
 
