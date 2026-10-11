@@ -4,7 +4,7 @@ Run the **Publish Git Chunk** GitHub Actions workflow from `main` with a version
 
 Users need Git, but no .NET SDK. The Windows setup adds a Start menu entry and registers `git chunk` on the user PATH without administrator permissions. Open a new terminal after installation. Uninstall leaves repository configuration and data untouched; its PATH entry remains harmless and can be removed manually.
 
-v1.0.0 is published. With the package manager already installed:
+v1.1.0 is published and includes automatic conversion of current Git LFS files. With the package manager already installed:
 
 ```powershell
 # With Scoop already installed:
@@ -18,7 +18,7 @@ brew tap MDJ0126/gitchunk https://github.com/MDJ0126/GitChunk
 brew install --cask MDJ0126/gitchunk/git-chunk
 ```
 
-Then run `git chunk install` in each project. The release assets and manifests are published. Windows installer installation, CLI execution and uninstall have been tested; both Mac architectures passed native build and data tests. Complete Scoop/Homebrew installation on a user's computer remains unverified.
+Then run `git chunk install` in each project. Existing LFS projects require a clean tracked working tree and index; review the staged conversion, then commit and push. Past LFS history and server storage remain unchanged. The v1.1.0 release assets and manifests are published. Windows LFS conversion and both Mac architectures passed release build and data tests. Windows installer installation, CLI execution and uninstall were tested for v1.0.0; full installation of v1.1.0 through Scoop/Homebrew or the installer remains unverified.
 
 Windows users can also download `GitChunk-Setup-win-x64.exe` from Releases and double-click it. Mac users can download their architecture's ZIP and move `GitChunk.app` to Applications. Builds are not publisher-signed or Apple-notarized. OS trust prompts may appear; package availability does not imply code signing.
 
