@@ -1,2 +1,5 @@
 Tools/ResourceSplitter/bin/
 Tools/ResourceSplitter/obj/
+
+# ResourceSplitter chunk cache (required chunks are staged by the hook)
+/.resourcesplitter/objects/

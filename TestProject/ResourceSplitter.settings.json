@@ -1,7 +1,4 @@
 {
-  "IncludePaths": [
-    "."
-  ],
   "ExcludeDirectories": [
     "Library",
     "Temp",
@@ -22,5 +19,8 @@
   ],
   "ExcludeFilePatterns": [
     "*.restore-*"
+  ],
+  "IncludePaths": [
+    "."
   ]
 }

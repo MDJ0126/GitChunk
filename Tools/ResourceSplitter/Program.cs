@@ -258,6 +258,7 @@ class Program
         bool interactive = args.Length == 0;
         try
         {
+            if (args.Length > 0 && args[0].StartsWith("git-", StringComparison.Ordinal)) return GitIntegration.Run(args);
             var root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(args.Length > 1 ? args[1] : Directory.GetCurrentDirectory()));
             string? mode;
             if (interactive)
@@ -269,7 +270,7 @@ class Program
                 Console.WriteLine("다른 폴더를 사용하려면 프로젝트 경로를 입력하세요:");
                 var selectedRoot = Console.ReadLine()?.Trim().Trim('"');
                 if (!string.IsNullOrEmpty(selectedRoot)) root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(selectedRoot));
-                Console.WriteLine($"대상: {root}\n1. 분할 (Split): 50 MiB 초과 파일과 연결된 .meta를 원본 옆에 조각 저장, 검증 후 원본 삭제\n2. 합치기 (Restore): 원본과 원래 .meta 함께 복원\n0. 종료\n분할 대상 외의 작은 파일과 .meta는 유지 / 캐시 제외 / 복원 전 에디터 실행 금지 / 백업하고 편집기를 닫고 실행해 주세요.");
+                Console.WriteLine($"대상: {root}\n1. 분할 (Split): 50 MiB 초과 파일과 연결된 .meta를 원본 옆에 조각 저장, 검증 후 원본 삭제\n2. 합치기 (Restore): 원본과 원래 .meta 함께 복원\n3. Git 자동 분할·복원 설치 (Git 저장소 루트 선택 필요)\n0. 종료\n수동 분할 대상 외의 작은 파일과 .meta는 유지 / 캐시 제외 / 수동 복원 전 에디터 실행 금지 / 백업하고 편집기를 닫고 실행해 주세요.");
                 mode = Console.ReadLine();
                 if (mode == "0") return 0;
             }
@@ -280,6 +281,7 @@ class Program
                 if (args.Length < 2) Console.WriteLine("경로를 지정하지 않아 현재 작업 폴더를 사용합니다.");
             }
             if (!Directory.Exists(root)) throw new Exception("Project folder does not exist: " + root);
+            if (mode == "3") return GitIntegration.Run(new[] { "git-install", root });
             long chunk = args.Length > 2 ? long.Parse(args[2]) : 49L * 1024 * 1024;
             if (chunk < 1 || chunk > 49L * 1024 * 1024) throw new Exception("Chunk size must be 1..51380224 bytes (49 MiB).");
             if (mode is "1" or "split") Split(root, chunk);

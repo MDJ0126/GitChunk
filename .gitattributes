@@ -1,0 +1,9 @@
+
+# ResourceSplitter automatic storage
+* filter=resourcesplitter -text
+*.meta -filter
+.gitattributes -filter
+.gitignore -filter
+.resourcesplitter/** -filter -text -diff -merge
+ResourceSplitter.* -filter
+Tools/ResourceSplitter/** -filter
