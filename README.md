@@ -6,6 +6,21 @@
 
 ![Git Chunk splits originals into Git chunks and restores them on checkout.](docs/assets/git-chunk-overview.png)
 
+## Compared with Git LFS
+
+| Item | Git Chunk | Git LFS |
+| --- | --- | --- |
+| Storage | A pointer at the original path plus chunks in `.gitchunk/objects`, all stored in Git | A pointer in Git; original contents stored on an LFS server |
+| Large-file handling | Automatically splits files over 50 MiB into chunks of up to 49 MiB; `.chunkignore` excludes matching files | Tracks file patterns configured with `git lfs track` |
+| Remote requirements | Uses the existing Git remote; no LFS endpoint required | Requires an LFS endpoint, provided by the host or configured separately |
+| Local setup | Install Git Chunk, then run `git chunk install` in each repository, including after cloning | Install Git LFS, run `git lfs install`, and configure tracking patterns |
+| Everyday workflow | Normal Git commands; filters and hooks store chunks and restore originals | Normal Git commands; Git LFS transfers originals separately |
+| Storage and bandwidth | Chunk history contributes to Git repository size; the Git host's limits still apply | LFS storage and bandwidth follow the provider's policies; GitHub meters them separately |
+
+**Splitting does not reduce total asset size or remove repository limits.** Asset revisions remain in Git history and can increase clone size. Git Chunk does not use LFS storage for converted files, but converting an existing project does not delete its past LFS objects.
+
+References: [Git LFS documentation](https://github.com/git-lfs/git-lfs/blob/main/docs/man/git-lfs.adoc), [LFS server configuration](https://github.com/git-lfs/git-lfs/blob/main/docs/api/server-discovery.md), [GitHub LFS billing](https://docs.github.com/en/billing/concepts/product-billing/git-lfs).
+
 ## Install
 
 **Windows:** [Download the installer](https://github.com/MDJ0126/GitChunk/releases/latest), or use Scoop:
