@@ -29,7 +29,7 @@ Both help manage large files while **you keep working with the originals as usua
 | Do I need a separate file storage service? | LFS support from your Git host or a separate LFS service | **Uses your existing Git repository; no separate LFS service needed** |
 | Which storage allowance is used? | LFS storage | **Ordinary Git repository storage** |
 
-Splitting files does not reduce their total size. Your Git host's storage limits still apply. Frequent changes to large files can grow the history and increase the amount of data needed to clone the project.
+Splitting files does not reduce their total size. Your Git host's storage limits still apply.
 
 ## Install and set up your project
 
