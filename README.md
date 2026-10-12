@@ -6,16 +6,22 @@
 
 ![Git Chunk splits originals into Git chunks and restores them on checkout.](docs/assets/git-chunk-overview.png)
 
-## Compared with Git LFS
+## Similar to Git LFS, with a different storage approach
 
-| Item | Git Chunk | Git LFS |
+Both tools **commit pointers to Git while you work with original files locally**. Both integrate with ordinary Git commands through filters and hooks. Git Chunk's key difference is that **the actual data is stored as chunks in the same Git repository instead of a separate LFS store**.
+
+| Item | Git LFS | Git Chunk |
 | --- | --- | --- |
-| Storage | A pointer at the original path plus chunks in `.gitchunk/objects`, all stored in Git | A pointer in Git; original contents stored on an LFS server |
-| Large-file handling | Automatically splits files over 50 MiB into chunks of up to 49 MiB; `.chunkignore` excludes matching files | Tracks file patterns configured with `git lfs track` |
-| Remote requirements | Uses the existing Git remote; no LFS endpoint required | Requires an LFS endpoint, provided by the host or configured separately |
-| Local setup | Install Git Chunk, then run `git chunk install` in each repository, including after cloning | Install Git LFS, run `git lfs install`, and configure tracking patterns |
-| Everyday workflow | Normal Git commands; filters and hooks store chunks and restore originals | Normal Git commands; Git LFS transfers originals separately |
-| Storage and bandwidth | Chunk history contributes to Git repository size; the Git host's limits still apply | LFS storage and bandwidth follow the provider's policies; GitHub meters them separately |
+| Basic structure | Pointers separated from actual data | Pointers separated from actual data |
+| Committed at the original path | A pointer containing the file hash and size | A pointer containing original and chunk hashes and sizes |
+| Local working tree | Original files | Original files |
+| Git integration | Automatic processing through filters and hooks | Automatic processing through filters and hooks |
+| Actual data storage | A separate LFS store | **Chunks in `.gitchunk/objects` in the same Git repository** |
+| Data unit | Whole-file objects | **Files over 50 MiB split into chunks of up to 49 MiB** |
+| Data transfer | Git history and LFS data transferred separately | **History and chunks transferred together through Git push and pull** |
+| Server requirements | An LFS endpoint | **An ordinary Git server; no separate LFS service required** |
+| Duplicate data reuse | Identical whole-file objects reused | **Identical chunks reused** |
+| Historical data and storage | Actual data retained in LFS, subject to LFS storage policies | **Past chunks included in Git history, subject to ordinary Git storage policies** |
 
 **Splitting does not reduce total asset size or remove repository limits.** Asset revisions remain in Git history and can increase clone size. Git Chunk does not use LFS storage for converted files, but converting an existing project does not delete its past LFS objects.
 
