@@ -12,4 +12,4 @@ Apply Git Chunk once per repository and computer with `git chunk install`, or se
 
 Builds are not publisher-signed or Apple-notarized. OS trust prompts may appear. The project provides its own Scoop bucket and Homebrew tap; no public winget, Homebrew core, or npm registry entry is claimed.
 
-For installation commands, see the [README](../README.md). Workflow results and release assets provide the verification record for each publication; do not treat an uncompleted workflow as a published release.
+For installation commands, see the [English README](../README.en.md). Workflow results and release assets provide the verification record for each publication; do not treat an uncompleted workflow as a published release.

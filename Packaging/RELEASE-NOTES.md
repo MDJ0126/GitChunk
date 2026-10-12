@@ -18,7 +18,7 @@ Windows는 **GitChunk-Setup-win-x64.exe**를 내려받아 실행하세요. macOS
 
 Git Chunk 앱에서 프로젝트 폴더를 선택하고 **Install Git Chunk**를 누르거나, 프로젝트 폴더에서 `git chunk install`을 실행하세요. 처음 적용한 설정을 커밋한 뒤에는 평소처럼 Git을 사용하시면 됩니다. 새 PC와 팀원의 PC에서도 설치·프로젝트 적용이 필요합니다.
 
-[한국어 사용 안내](https://github.com/MDJ0126/GitChunk/blob/main/README.ko.md) · [English guide](https://github.com/MDJ0126/GitChunk/blob/main/README.md)
+[한국어 사용 안내](https://github.com/MDJ0126/GitChunk/blob/main/README.md) · [English guide](https://github.com/MDJ0126/GitChunk/blob/main/README.en.md)
 
 ## 배포 안내
 
