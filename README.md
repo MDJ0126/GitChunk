@@ -2,56 +2,62 @@
 
 [한국어](README.ko.md)
 
-**Manage large assets without Git LFS.** Files over **50 MiB** are stored in chunks of up to **49 MiB**, while you work with full originals locally. No .NET SDK needed.
+**Keep large files in Git and work as usual.**
 
-![Git Chunk splits originals into Git chunks and restores them on checkout.](docs/assets/git-chunk-overview.png)
+Install Git Chunk and set it up once for your project. Then **edit your original files and commit, push, and pull as usual**. You do not need to split files or put them back together yourself. No .NET SDK is needed.
 
-## Similar to Git LFS, with a different storage approach
+![Large files are split automatically for storage and restored to originals when checked out.](docs/assets/git-chunk-overview.png)
 
-Both tools **commit pointers to Git while you work with original files locally**. Both integrate with ordinary Git commands through filters and hooks. Git Chunk's key difference is that **the actual data is stored as chunks in the same Git repository instead of a separate LFS store**.
+## What changes in everyday use?
 
-| Item | Git LFS | Git Chunk |
+1. Edit images, videos, game assets, and other files in your usual programs.
+2. Commit and push your changes as usual. Git Chunk automatically splits large files for storage.
+3. Pull changes on another computer or switch versions, and the original files are restored automatically.
+
+**You do not need to open the Git Chunk app or run an extra command each time.** Setup is needed when first applying it to a project and after cloning on a new computer. Each collaborator also needs to install Git Chunk and set it up for the project.
+
+## How is it similar to Git LFS?
+
+Both help manage large files while **you keep working with the originals as usual**. Git Chunk's difference is that it splits large files and **keeps them in the same Git repository as your code**.
+
+| Everyday question | Git LFS | Git Chunk |
 | --- | --- | --- |
-| Basic structure | Pointers separated from actual data | Pointers separated from actual data |
-| Committed at the original path | A pointer containing the file hash and size | A pointer containing original and chunk hashes and sizes |
-| Local working tree | Original files | Original files |
-| Git integration | Automatic processing through filters and hooks | Automatic processing through filters and hooks |
-| Actual data storage | A separate LFS store | **Chunks in `.gitchunk/objects` in the same Git repository** |
-| Data unit | Whole-file objects | **Files over 50 MiB split into chunks of up to 49 MiB** |
-| Data transfer | Git history and LFS data transferred separately | **History and chunks transferred together through Git push and pull** |
-| Server requirements | An LFS endpoint | **An ordinary Git server; no separate LFS service required** |
-| Duplicate data reuse | Identical whole-file objects reused | **Identical chunks reused** |
-| Historical data and storage | Actual data retained in LFS, subject to LFS storage policies | **Past chunks included in Git history, subject to ordinary Git storage policies** |
+| Do my working files change? | You work with the originals | You work with the originals |
+| Is extra work needed each time? | After setup, processing happens automatically during normal Git use | After setup, processing happens automatically during normal Git use |
+| Where are large files kept? | Separate LFS storage | **The same Git repository as your code** |
+| Do I need to split files myself? | No | No; **large files are split and restored automatically** |
+| Do I need a separate file storage service? | LFS support from your Git host or a separate LFS service | **Uses your existing Git repository; no separate LFS service needed** |
+| Which storage allowance is used? | LFS storage | **Ordinary Git repository storage** |
 
-**Splitting does not reduce total asset size or remove repository limits.** Asset revisions remain in Git history and can increase clone size. Git Chunk does not use LFS storage for converted files, but converting an existing project does not delete its past LFS objects.
+Splitting files does not reduce their total size. Your Git host's storage limits still apply. Frequent changes to large files can grow the history and increase the amount of data needed to clone the project.
 
-References: [Git LFS documentation](https://github.com/git-lfs/git-lfs/blob/main/docs/man/git-lfs.adoc), [LFS server configuration](https://github.com/git-lfs/git-lfs/blob/main/docs/api/server-discovery.md), [GitHub LFS billing](https://docs.github.com/en/billing/concepts/product-billing/git-lfs).
+## Install and set up your project
 
-## Install
+### 1. Install Git Chunk
 
-**Windows:** [Download the installer](https://github.com/MDJ0126/GitChunk/releases/latest), or use Scoop:
+**Windows:** [Download and run the installer](https://github.com/MDJ0126/GitChunk/releases/latest). If you use Scoop, you can also install with:
 
 ```powershell
 scoop bucket add gitchunk https://github.com/MDJ0126/GitChunk.git
 scoop install gitchunk/git-chunk
 ```
 
-**Mac:** Use Homebrew:
+**Mac:** Install with Homebrew:
 
 ```bash
 brew tap MDJ0126/gitchunk https://github.com/MDJ0126/GitChunk
 brew install --cask MDJ0126/gitchunk/git-chunk
 ```
 
-## Get started
+### 2. Apply it to your project
 
-Run once in your project's Git repository root, including after cloning on a new PC:
+Select the project folder in the Git Chunk app and click **Install Git Chunk**. Or run this command in the top-level folder of your project's Git repository:
 
 ```bash
 git chunk install
 ```
 
-For existing tracked files, apply and commit the configuration:
+If the project already has files tracked by Git, run these commands once to apply the new storage method and commit the configuration. For an existing Git LFS project, follow the conversion steps below instead.
 
 ```bash
 git add -u
@@ -60,13 +66,13 @@ git add .gitattributes .gitignore .gitchunk
 git commit -m "Configure Git Chunk"
 ```
 
-Then use **add, commit, push, pull and checkout** as usual. You can also select a project in the app and click **Install Git Chunk**.
+**You can now use Git as usual.** After cloning the project on a new computer, run `git chunk install` once there too.
 
-Add patterns such as `Build/**` to `.chunkignore` to store matching files whole. Do not delete `.gitchunk/objects`.
+## Already using Git LFS?
 
-## Convert a Git LFS project
+**Version 1.1.0 or later** can convert your current files to Git Chunk. First commit your changes or temporarily save them with stash. Git LFS must be installed, and you need access to the remote repository in case originals need to be downloaded.
 
-Requires **v1.1.0 or later**. Commit or stash tracked changes first. Git LFS and remote access are required to download missing originals.
+Run these commands in the project folder. `git diff --cached` lets you review the changes before committing.
 
 ```bash
 git chunk install
@@ -75,14 +81,20 @@ git commit -m "Convert current LFS files to Git Chunk"
 git push
 ```
 
-Installation converts current LFS files and stages the result; it does not commit or push automatically. **Past LFS history and server storage are preserved.** See the [detailed guide](docs/guide.md#convert-an-existing-git-lfs-project) for conversion limits and storage cleanup.
+Conversion automatically prepares the changes for a commit. You commit and push them yourself. **Past LFS data stays in place; existing LFS storage is not automatically freed.** See the [conversion guide](docs/guide.md#convert-an-existing-git-lfs-project) for details.
 
-## Update
+## Updates and extra settings
+
+Update from your project folder with:
 
 ```bash
 git chunk update
 ```
 
-Run in the repository root. Older versions without this command need a one-time upgrade through the installer or package manager.
+Older versions without this command need a one-time upgrade through the installer or package manager.
 
-[Detailed guide and uninstall](docs/guide.md) · [Distribution](Packaging/README.md) · [Technical notes](INSTRUCTIONS.md)
+By default, files **over 50 MiB** are split into chunks of up to **49 MiB**. Use the app's exclusion list or `.chunkignore` for files you want to keep whole. Do not delete the automatically created `.gitchunk/objects` folder: it is needed to restore files.
+
+[Detailed usage and uninstall](docs/guide.md) · [Distribution](Packaging/README.md) · [Technical notes](INSTRUCTIONS.md)
+
+Comparison references: [Git LFS documentation](https://github.com/git-lfs/git-lfs/blob/main/docs/man/git-lfs.adoc), [GitHub LFS storage and billing](https://docs.github.com/en/billing/concepts/product-billing/git-lfs).
