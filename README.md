@@ -70,7 +70,7 @@ git commit -m "Configure Git Chunk"
 
 ## Already using Git LFS?
 
-**Version 1.1.0 or later** can convert your current files to Git Chunk. First commit your changes or temporarily save them with stash. Git LFS must be installed, and you need access to the remote repository in case originals need to be downloaded.
+You can convert your current files to Git Chunk. First commit your changes or temporarily save them with stash. Git LFS must be installed, and you need access to the remote repository in case originals need to be downloaded.
 
 Run these commands in the project folder. `git diff --cached` lets you review the changes before committing.
 

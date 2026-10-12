@@ -47,7 +47,7 @@ git commit -m "Configure Git Chunk"
 
 ## 기존 Git LFS 프로젝트 전환
 
-**LFS 자동 전환에는 v1.1.0 이상이 필요합니다.** v1.0.0에는 이 기능이 없습니다. `GitChunk.exe`를 직접 실행할 때는 대상 프로젝트 폴더에서 아래 설치 명령 대신 실행 파일의 실제 경로를 지정하여 `GitChunk.exe install`을 실행합니다.
+현재 릴리스는 LFS 자동 전환을 지원합니다. `GitChunk.exe`를 직접 실행할 때는 대상 프로젝트 폴더에서 아래 설치 명령 대신 실행 파일의 실제 경로를 지정하여 `GitChunk.exe install`을 실행합니다.
 
 1. 대상 프로젝트의 최상위 폴더에서 추적 파일의 변경을 먼저 커밋하거나 stash합니다. 원본 다운로드가 필요하면 Git LFS와 원격 접근 권한이 필요합니다.
 2. 아래 명령으로 설치합니다. 누락된 원본 확보 → 크기·SHA-256 검증 → LFS 속성과 기본 훅 전환 → 파일 변환·복원 검증 → 스테이징을 자동 처리합니다.
@@ -69,7 +69,7 @@ git push
 
 기존 이력을 제거하기 **전에** `git lfs ls-files --all --long`으로 과거 LFS 객체 ID와 경로를 저장합니다. 이 목록은 확보한 Git 이력이 참조하는 객체이며, 서버 전체 객체 목록이나 실제 청구 용량을 뜻하지 않습니다. 저장소 주소·기존 객체 ID·검증된 새 커밋 ID를 첨부하여 [GitHub 지원팀](https://support.github.com/)에 삭제를 요청합니다. GitChunk는 원격 LFS 객체를 삭제하지 않습니다. [GitHub 공식 문서도 파일 전환 후 서버 객체가 삭제될 때까지 LFS 용량에 포함된다고 안내합니다](https://docs.github.com/en/repositories/working-with-files/managing-large-files/removing-files-from-git-large-file-storage).
 
-v1.1.1에서는 LFS 전환 중 이미 일반 Git으로 추적하던 대용량 파일도 조각화하고, LFS 포인터 검색을 일괄 처리합니다. LFS 리소스와 대용량 빌드 파일이 함께 있는 프로젝트도 처리합니다.
+LFS 전환 중 이미 일반 Git으로 추적하던 대용량 파일도 조각화하고, LFS 포인터 검색을 일괄 처리합니다. LFS 리소스와 대용량 빌드 파일이 함께 있는 프로젝트도 처리합니다.
 
 [배포 상세](../Packaging/README.md) · [기술 설명](../INSTRUCTIONS.md)
 

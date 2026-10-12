@@ -13,7 +13,7 @@ mkdir -p "$app/Contents/MacOS"
 mkdir -p "$app/Contents/Resources"
 iconutil -c icns "$script_dir/../Assets/AppIcon.iconset" -o "$app/Contents/Resources/AppIcon.icns"
 cp "$script_dir/../Assets/AppIcon.png" "$app/Contents/Resources/AppIcon.png"
-version="${GITCHUNK_VERSION:-1.2.0}"
+version="${GITCHUNK_VERSION:-1.0.0}"
 [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo 'Invalid version' >&2; exit 1; }
 dotnet publish "$script_dir/../GitChunk.csproj" -c Release -r "$rid" -p:Version="$version" --self-contained true -o "$out/cli"
 cp "$out/cli/GitChunk" "$app/Contents/MacOS/GitChunk-cli"

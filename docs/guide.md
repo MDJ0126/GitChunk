@@ -47,7 +47,7 @@ Files over **50 MiB** become chunks of up to **49 MiB** by default. Add paths to
 
 ## Convert an existing Git LFS project
 
-**Automatic LFS conversion requires v1.1.0 or later.** v1.0.0 does not include this feature. To run `GitChunk.exe` directly, stay in the target repository root and replace the install command below with the actual executable path followed by `install`.
+The current release supports automatic LFS conversion. To run `GitChunk.exe` directly, stay in the target repository root and replace the install command below with the actual executable path followed by `install`.
 
 1. In the target repository root, commit or stash tracked changes first. Downloading missing originals requires Git LFS and remote access.
 2. Run the commands below. Installation obtains missing originals, verifies size and SHA-256, converts LFS attributes and standard hooks, verifies conversion/restoration, and stages the result.
@@ -69,7 +69,7 @@ To reclaim server LFS storage, first upload and verify the converted project. If
 
 Save `git lfs ls-files --all --long` **before** removing the old history to obtain the historical object IDs and paths. This lists objects referenced by available Git history, not a server inventory or billing total. Submit the repository URLs, old object IDs and verified new commit IDs through [GitHub Support](https://support.github.com/). GitChunk does not delete remote LFS objects. [GitHub documents that removed LFS objects continue to consume storage until purged](https://docs.github.com/en/repositories/working-with-files/managing-large-files/removing-files-from-git-large-file-storage).
 
-v1.1.1 also converts existing large ordinary Git files during LFS migration and batches LFS pointer discovery. This covers mixed repositories containing both LFS resources and large build files.
+LFS migration also converts existing large ordinary Git files and batches LFS pointer discovery. This covers mixed repositories containing both LFS resources and large build files.
 
 [Distribution details](../Packaging/README.md) · [Technical notes](../INSTRUCTIONS.md)
 

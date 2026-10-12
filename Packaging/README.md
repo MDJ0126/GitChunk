@@ -1,27 +1,15 @@
 # Binary distribution
 
-Run the **Publish Git Chunk** GitHub Actions workflow from `main` with a version such as `1.0.0`. It builds and tests Windows and both Mac architectures before creating a GitHub Release. An existing version fails instead of overwriting its assets. It then commits generated `bucket` and `Casks` manifests to `main`. Repository rules must allow the workflow to push; concurrent commits cause a safe rejection instead of overwriting work.
+Run the **Publish Git Chunk** GitHub Actions workflow from `main` with version `1.0.0`. It builds and tests Windows and both macOS architectures before publishing a release with the description in [RELEASE-NOTES.md](RELEASE-NOTES.md). Existing releases are not overwritten.
 
-Users need Git, but no .NET SDK. The Windows setup adds a Start menu entry and registers `git chunk` on the user PATH without administrator permissions. Open a new terminal after installation. Uninstall leaves repository configuration and data untouched; its PATH entry remains harmless and can be removed manually.
+The workflow builds the Windows installer and portable ZIP, macOS Apple Silicon and Intel ZIPs, and SHA256SUMS. Scoop and Homebrew manifests are generated from the exact asset checksums and committed to `main`. Repository rules must allow that push; concurrent commits cause a safe rejection.
 
-The next release adds `git chunk update`: it downloads and verifies the latest release, applies it to the current repository, and records a user-local command cache. Existing updater-aware commands then forward to the new executable without modifying package-manager files. Older released commands need a one-time installer/package upgrade to gain this feature. `install` applies the running version and checks for newer releases; `version` prints the actual executable. Publishing must stamp the release version into both GUI and CLI builds. The source default 1.2.0 is an upcoming version, not evidence that it has been released.
+This release resets the previous trial version numbering to **v1.0.0**. It includes the current LFS conversion, update, exclusion-list, and legacy-data compatibility features. Users of old 1.1.x or 1.2.x trial builds must reinstall rather than use automatic update to move to 1.0.0. Back up or deactivate their old active update cache before applying the new build, because cached higher versions take precedence.
 
-v1.1.0 is published and includes automatic conversion of current Git LFS files. With the package manager already installed:
+Users need Git, but no .NET SDK. The Windows installer adds a Start menu entry and can register `git chunk` on the user PATH without administrator permissions. Open a new terminal after installation. On macOS, select the ZIP matching the processor and move GitChunk.app to Applications, or use the project's Homebrew tap.
 
-```powershell
-# With Scoop already installed:
-scoop bucket add gitchunk https://github.com/MDJ0126/GitChunk.git
-scoop install gitchunk/git-chunk
-```
+Apply Git Chunk once per repository and computer with `git chunk install`, or select the project in the app and click **Install Git Chunk**. Commit the initial configuration, then use Git as usual. Existing LFS conversion requires committed or stashed tracked changes; inspect the prepared changes before committing and pushing. Past LFS data and history stay in place.
 
-```bash
-# With Homebrew already installed:
-brew tap MDJ0126/gitchunk https://github.com/MDJ0126/GitChunk
-brew install --cask MDJ0126/gitchunk/git-chunk
-```
+Builds are not publisher-signed or Apple-notarized. OS trust prompts may appear. The project provides its own Scoop bucket and Homebrew tap; no public winget, Homebrew core, or npm registry entry is claimed.
 
-Then run `git chunk install` in each project. Existing LFS projects require a clean tracked working tree and index; review the staged conversion, then commit and push. Past LFS history and server storage remain unchanged. The v1.1.0 release assets and manifests are published. Windows LFS conversion and both Mac architectures passed release build and data tests. Windows installer installation, CLI execution and uninstall were tested for v1.0.0; full installation of v1.1.0 through Scoop/Homebrew or the installer remains unverified.
-
-Windows users can also download `GitChunk-Setup-win-x64.exe` from Releases and double-click it. Mac users can download their architecture's ZIP and move `GitChunk.app` to Applications. Builds are not publisher-signed or Apple-notarized. OS trust prompts may appear; package availability does not imply code signing.
-
-No public winget, Homebrew core, or npm registry entry is claimed. These are the project's own package feeds.
+For installation commands, see the [README](../README.md). Workflow results and release assets provide the verification record for each publication; do not treat an uncompleted workflow as a published release.
