@@ -1,0 +1,2 @@
+# Files matching these patterns are stored whole, without chunking.
+# One pattern per line. Example: Build/**
