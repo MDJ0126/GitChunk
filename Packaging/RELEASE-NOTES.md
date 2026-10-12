@@ -1,5 +1,35 @@
 # Git Chunk 1.0.0
 
+Keep large files in Git and work as usual.
+
+Install Git Chunk and set it up once for your project. Then edit your original files and commit, push, and pull as usual. Splitting large files for storage and restoring the originals happens automatically.
+
+## Features
+
+- Splits files over 50 MiB into chunks of up to 49 MiB and stores them in the same Git repository as your code. No separate LFS storage service is needed.
+- Keeps original files in your working directory. No manual splitting or reassembly is needed.
+- Lets you select a project and configure file exclusions in the app.
+- Converts current files in an existing Git LFS project. Past LFS history and server data are preserved.
+- Provides a Windows installer and portable ZIP, macOS Apple Silicon and Intel packages, and Scoop and Homebrew installation. Git is required; the .NET SDK is not.
+
+## Install and get started
+
+On Windows, download and run **GitChunk-Setup-win-x64.exe**. On macOS, choose **GitChunk-osx-arm64.zip** for Apple Silicon or **GitChunk-osx-x64.zip** for Intel, then move the app to Applications.
+
+Select your project folder in the Git Chunk app and click **Install Git Chunk**, or run `git chunk install` from the project folder. Commit the initial configuration, then use Git as usual. Setup is also required on new computers and each teammate's computer.
+
+[English guide](https://github.com/MDJ0126/GitChunk/blob/main/README.md) · [한국어 사용 안내](https://github.com/MDJ0126/GitChunk/blob/main/README.ko.md)
+
+## Release notes
+
+This official release restarts versioning at **v1.0.0** after the earlier test releases. If you installed a 1.1.x or 1.2.x test version, reinstall using the new installer instead of automatic updates. Keep your existing project's original files and chunk data, then apply the new program to the project again.
+
+Chunk data counts toward ordinary Git repository storage, and your hosting provider's limits still apply. Windows and macOS binaries are not code-signed or Apple-notarized, so your operating system may display a confirmation when you run them. Use **SHA256SUMS** to verify downloaded files.
+
+---
+
+## 한국어
+
 큰 파일도 Git으로 관리하고, 작업은 평소처럼 하세요.
 
 Git Chunk를 설치하고 프로젝트에 한 번 적용하면 원본 파일을 편집하고 평소처럼 커밋·푸시·풀하시면 됩니다. 큰 파일을 나누어 저장하고 원본으로 복원하는 작업은 자동으로 처리합니다.
