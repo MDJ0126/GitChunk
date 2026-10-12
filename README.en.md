@@ -1,6 +1,6 @@
 # Git Chunk
 
-[한국어](README.md)
+[한국어](README.ko.md)
 
 **Keep large files in Git and work as usual.**
 

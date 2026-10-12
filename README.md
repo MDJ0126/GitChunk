@@ -1,63 +1,63 @@
 # Git Chunk
 
-[English](README.en.md)
+[한국어](README.ko.md)
 
-**큰 파일도 Git으로 관리하고, 작업은 평소처럼 하세요.**
+**Keep large files in Git and work as usual.**
 
-Git Chunk를 설치하고 프로젝트에 한 번 적용하면, 이후에는 **원본 파일을 편집하고 평소처럼 커밋·푸시·풀**하시면 됩니다. 파일을 직접 나누거나 다시 합칠 필요가 없습니다. .NET SDK도 필요 없습니다.
+Install Git Chunk and set it up once for your project. Then **edit your original files and commit, push, and pull as usual**. You do not need to split files or put them back together yourself. No .NET SDK is needed.
 
-![큰 파일을 자동으로 나누어 저장하고, 내려받을 때 원본으로 복원합니다.](docs/assets/git-chunk-overview.png)
+![Large files are split automatically for storage and restored to originals when checked out.](docs/assets/git-chunk-overview.png)
 
-## 설치 후에는 어떻게 사용하나요?
+## What changes in everyday use?
 
-1. 이미지, 영상, 게임 리소스 등을 기존 프로그램에서 그대로 편집합니다.
-2. 평소처럼 변경한 파일을 커밋하고 푸시합니다. 큰 파일은 Git Chunk가 자동으로 나누어 저장합니다.
-3. 다른 PC에서 풀하거나 다른 버전으로 이동하면 원본 파일로 자동 복원됩니다.
+1. Edit images, videos, game assets, and other files in your usual programs.
+2. Commit and push your changes as usual. Git Chunk automatically splits large files for storage.
+3. Pull changes on another computer or switch versions, and the original files are restored automatically.
 
-**매번 Git Chunk 앱을 열거나 별도 명령을 실행할 필요는 없습니다.** 처음 프로젝트에 적용할 때와 새 PC에서 프로젝트를 내려받았을 때만 설정이 필요합니다. 함께 작업하는 분들도 각자 설치하고 프로젝트에 적용해 주세요.
+**You do not need to open the Git Chunk app or run an extra command each time.** Setup is needed when first applying it to a project and after cloning on a new computer. Each collaborator also needs to install Git Chunk and set it up for the project.
 
-## Git LFS와 무엇이 비슷하고 다른가요?
+## How is it similar to Git LFS?
 
-둘 다 큰 파일을 관리하면서 **사용자는 원본 파일로 평소처럼 작업**할 수 있게 해줍니다. Git Chunk는 큰 파일을 나누어 **코드와 같은 Git 저장소에 함께 보관**한다는 점이 다릅니다.
+Both help manage large files while **you keep working with the originals as usual**. Git Chunk's difference is that it splits large files and **keeps them in the same Git repository as your code**.
 
-| 사용자가 궁금한 점 | Git LFS | Git Chunk |
+| Everyday question | Git LFS | Git Chunk |
 | --- | --- | --- |
-| 작업할 때 파일이 달라지나요? | 원본 파일 그대로 사용 | 원본 파일 그대로 사용 |
-| 매번 별도 작업이 필요한가요? | 초기 설정 후 일반 Git 작업에 맞춰 자동 처리 | 초기 설정 후 일반 Git 작업에 맞춰 자동 처리 |
-| 큰 파일은 어디에 보관되나요? | 별도 LFS 저장 공간 | **코드와 같은 Git 저장소** |
-| 파일을 직접 나눠야 하나요? | 필요 없음 | 필요 없음, **큰 파일을 자동으로 나누고 복원** |
-| 별도 파일 저장 서비스가 필요한가요? | Git 호스팅 서비스의 LFS 지원 또는 별도 LFS 서비스 필요 | **기존 Git 저장소 사용, 별도 LFS 서비스 불필요** |
-| 저장 용량은 어디에 포함되나요? | LFS 저장 용량 | **일반 Git 저장소 용량** |
+| Do my working files change? | You work with the originals | You work with the originals |
+| Is extra work needed each time? | After setup, processing happens automatically during normal Git use | After setup, processing happens automatically during normal Git use |
+| Where are large files kept? | Separate LFS storage | **The same Git repository as your code** |
+| Do I need to split files myself? | No | No; **large files are split and restored automatically** |
+| Do I need a separate file storage service? | LFS support from your Git host or a separate LFS service | **Uses your existing Git repository; no separate LFS service needed** |
+| Which storage allowance is used? | LFS storage | **Ordinary Git repository storage** |
 
-파일을 나누어도 전체 용량이 줄어드는 것은 아닙니다. Git 호스팅 서비스의 용량 제한은 그대로 적용됩니다.
+Splitting files does not reduce their total size. Your Git host's storage limits still apply.
 
-## 설치하고 프로젝트에 적용하기
+## Install and set up your project
 
-### 1. Git Chunk 설치
+### 1. Install Git Chunk
 
-**Windows:** [설치 파일을 다운로드](https://github.com/MDJ0126/GitChunk/releases/latest)해 실행하세요. Scoop을 사용하신다면 다음 명령으로 설치할 수도 있습니다.
+**Windows:** [Download and run the installer](https://github.com/MDJ0126/GitChunk/releases/latest). If you use Scoop, you can also install with:
 
 ```powershell
 scoop bucket add gitchunk https://github.com/MDJ0126/GitChunk.git
 scoop install gitchunk/git-chunk
 ```
 
-**Mac:** Homebrew로 설치하세요.
+**Mac:** Install with Homebrew:
 
 ```bash
 brew tap MDJ0126/gitchunk https://github.com/MDJ0126/GitChunk
 brew install --cask MDJ0126/gitchunk/git-chunk
 ```
 
-### 2. 사용할 프로젝트에 적용
+### 2. Apply it to your project
 
-Git Chunk 앱에서 프로젝트 폴더를 선택하고 **Install Git Chunk**를 누르세요. 또는 프로젝트의 Git 저장소 최상위 폴더에서 다음 명령을 실행하세요.
+Select the project folder in the Git Chunk app and click **Install Git Chunk**. Or run this command in the top-level folder of your project's Git repository:
 
 ```bash
 git chunk install
 ```
 
-기존에 Git으로 관리하던 파일이 있다면, 처음 한 번 아래 명령으로 새 저장 방식을 적용하고 설정을 커밋하세요. 기존 Git LFS 프로젝트라면 아래 전환 안내를 따라 주세요.
+If the project already has files tracked by Git, run these commands once to apply the new storage method and commit the configuration. For an existing Git LFS project, follow the conversion steps below instead.
 
 ```bash
 git add -u
@@ -66,13 +66,13 @@ git add .gitattributes .gitignore .gitchunk
 git commit -m "Configure Git Chunk"
 ```
 
-**이제 평소처럼 Git을 사용하시면 됩니다.** 새 PC에서 프로젝트를 clone한 뒤에도 `git chunk install`을 한 번 실행하세요.
+**You can now use Git as usual.** After cloning the project on a new computer, run `git chunk install` once there too.
 
-## 이미 Git LFS를 사용하고 있다면
+## Already using Git LFS?
 
-현재 파일을 Git Chunk 방식으로 전환할 수 있습니다. 먼저 작업 중인 변경 사항을 커밋하거나 stash로 임시 보관해 주세요. 원본 파일을 내려받아야 할 수 있으므로 Git LFS가 설치되어 있고 원격 저장소에 접근할 수 있어야 합니다.
+You can convert your current files to Git Chunk. First commit your changes or temporarily save them with stash. Git LFS must be installed, and you need access to the remote repository in case originals need to be downloaded.
 
-프로젝트 폴더에서 아래 명령을 실행하세요. `git diff --cached`는 커밋할 변경 내용을 확인하는 단계입니다.
+Run these commands in the project folder. `git diff --cached` lets you review the changes before committing.
 
 ```bash
 git chunk install
@@ -81,20 +81,20 @@ git commit -m "Convert current LFS files to Git Chunk"
 git push
 ```
 
-전환 결과는 커밋할 준비까지 자동으로 처리됩니다. 커밋과 푸시는 직접 하셔야 합니다. **과거 LFS 데이터는 그대로 남으며, 기존 LFS 저장 용량이 자동으로 비워지지는 않습니다.** 자세한 내용은 [전환 안내](docs/guide.ko.md#기존-git-lfs-프로젝트-전환)를 참고하세요.
+Conversion automatically prepares the changes for a commit. You commit and push them yourself. **Past LFS data stays in place; existing LFS storage is not automatically freed.** See the [conversion guide](docs/guide.md#convert-an-existing-git-lfs-project) for details.
 
-## 업데이트와 추가 설정
+## Updates and extra settings
 
-프로젝트 폴더에서 다음 명령으로 업데이트하세요.
+Update from your project folder with:
 
 ```bash
 git chunk update
 ```
 
-이 명령이 없는 구버전은 설치 파일이나 패키지 관리자로 먼저 업그레이드하세요.
+Older versions without this command need a one-time upgrade through the installer or package manager.
 
-기본적으로 **50 MiB 초과** 파일을 최대 **49 MiB**씩 나누어 저장합니다. 나누고 싶지 않은 파일은 앱의 제외 목록이나 `.chunkignore`에 지정할 수 있습니다. 자동으로 만들어지는 `.gitchunk/objects` 폴더는 파일 복원에 필요하므로 삭제하지 마세요.
+By default, files **over 50 MiB** are split into chunks of up to **49 MiB**. Use the app's exclusion list or `.chunkignore` for files you want to keep whole. Do not delete the automatically created `.gitchunk/objects` folder: it is needed to restore files.
 
-[상세 사용법 및 제거 방법](docs/guide.ko.md) · [배포 정보](Packaging/README.md) · [기술 설명](INSTRUCTIONS.md)
+[Detailed usage and uninstall](docs/guide.md) · [Distribution](Packaging/README.md) · [Technical notes](INSTRUCTIONS.md)
 
-비교 참고: [Git LFS 공식 문서](https://github.com/git-lfs/git-lfs/blob/main/docs/man/git-lfs.adoc), [GitHub LFS 용량·요금 안내](https://docs.github.com/en/billing/concepts/product-billing/git-lfs).
+Comparison references: [Git LFS documentation](https://github.com/git-lfs/git-lfs/blob/main/docs/man/git-lfs.adoc), [GitHub LFS storage and billing](https://docs.github.com/en/billing/concepts/product-billing/git-lfs).
