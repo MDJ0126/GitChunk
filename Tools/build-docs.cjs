@@ -1,3 +1,4 @@
+const socialMeta = require('./site-meta.cjs');
 const fs = require('node:fs');
 const path = require('node:path');
 const root = path.resolve(__dirname, '..');
@@ -65,7 +66,7 @@ for (const ko of [false, true]) {
     .replace('href="#getting-started"', `href="${home}#getting-started"`)
     .replace(`href="${ko ? 'index.html' : 'index.ko.html'}"`, `href="${other}"`);
   const footer = template.match(/<footer>.*?<\/footer>/s)[0];
-  const html = `<!doctype html><html lang="${ko ? 'ko' : 'en'}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Git Chunk — ${ko ? '사용 가이드' : 'User guide'}</title><meta name="description" content="${ko ? 'Git Chunk 설치, 사용, 업데이트, LFS 전환 및 제거 안내' : 'Install, use, update, migrate from LFS, and uninstall Git Chunk'}"><link rel="icon" href="assets/git-chunk-symbol.svg" type="image/svg+xml"><script src="assets/theme.js"></script><link rel="stylesheet" href="assets/site.css"></head><body>${header}<main class="wrap guide-layout"><aside class="guide-toc" aria-label="${ko ? '목차' : 'Contents'}"><strong>${ko ? '사용 가이드' : 'User guide'}</strong>${toc}</aside><article class="guide-article"><span class="eyebrow">Git Chunk / Documentation</span><h1>${ko ? '사용 가이드' : 'User guide'}</h1>${body}</article></main>${footer}</body></html>`;
+  const html = `<!doctype html><html lang="${ko ? 'ko' : 'en'}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Git Chunk — ${ko ? '사용 가이드' : 'User guide'}</title><meta name="description" content="${ko ? 'Git Chunk 설치, 사용, 업데이트, LFS 전환 및 제거 안내' : 'Install, use, update, migrate from LFS, and uninstall Git Chunk'}"><link rel="icon" href="assets/git-chunk-symbol.svg" type="image/svg+xml"><script src="assets/theme.js"></script><link rel="stylesheet" href="assets/site.css">${socialMeta("guide" + suffix + ".html", ko ? "Git Chunk — 사용 가이드" : "Git Chunk — User guide", ko ? "Git Chunk 설치, 사용, 업데이트 및 LFS 전환 안내" : "Install, use, update, and migrate to Git Chunk.", ko)}</head><body>${header}<main class="wrap guide-layout"><aside class="guide-toc" aria-label="${ko ? '목차' : 'Contents'}"><strong>${ko ? '사용 가이드' : 'User guide'}</strong>${toc}</aside><article class="guide-article"><span class="eyebrow">Git Chunk / Documentation</span><h1>${ko ? '사용 가이드' : 'User guide'}</h1>${body}</article></main>${footer}</body></html>`;
   fs.writeFileSync(path.join(docs, 'guide' + suffix + '.html'), html);
   console.log('Built guide' + suffix + '.html from Markdown');
 }
