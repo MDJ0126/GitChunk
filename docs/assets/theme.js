@@ -1,6 +1,5 @@
 (() => {
   const root = document.documentElement;
-  const preference = window.matchMedia('(prefers-color-scheme: dark)');
   let saved;
   try { saved = localStorage.getItem('gitchunk-theme'); } catch {}
   const setTheme = theme => {
@@ -14,7 +13,7 @@
     button.setAttribute('title', label);
     button.setAttribute('aria-pressed', String(dark));
   };
-  setTheme(saved === 'dark' || saved === 'light' ? saved : (preference.matches ? 'dark' : 'light'));
+  setTheme(saved === 'dark' || saved === 'light' ? saved : 'light');
   document.addEventListener('DOMContentLoaded', () => {
     setTheme(root.dataset.theme);
     document.querySelector('.theme-toggle')?.addEventListener('click', () => {
@@ -22,8 +21,5 @@
       setTheme(saved);
       try { localStorage.setItem('gitchunk-theme', saved); } catch {}
     });
-  });
-  preference.addEventListener('change', event => {
-    if (saved !== 'dark' && saved !== 'light') setTheme(event.matches ? 'dark' : 'light');
   });
 })();
