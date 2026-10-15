@@ -1,12 +1,23 @@
-# Git Chunk
+<p align="center">
+  <img src="docs/assets/git-chunk-logo-blue.png" alt="Git Chunk" width="420">
+</p>
+<p align="center"><strong>큰 파일도, 하나의 Git 저장소에서.</strong></p>
+<p align="center">
+  <a href="https://github.com/MDJ0126/GitChunk/releases/latest">다운로드</a> &middot;
+  <a href="docs/guide.md">사용 가이드</a> &middot;
+  <a href="README.md">English</a> &middot;
+  <a href="README.ko.md">한국어</a>
+</p>
 
-[English](README.md)
+---
 
 **큰 파일도 Git으로 관리하고, 작업은 평소처럼 하세요.**
 
 Git Chunk를 설치하고 프로젝트에 한 번 적용하면, 이후에는 **원본 파일을 편집하고 평소처럼 커밋·푸시·풀**하시면 됩니다. 파일을 직접 나누거나 다시 합칠 필요가 없습니다. .NET SDK도 필요 없습니다.
 
-![큰 파일을 자동으로 나누어 저장하고, 내려받을 때 원본으로 복원합니다.](docs/assets/git-chunk-overview.png)
+<p align="center">
+  <img src="docs/assets/git-chunk-hero-blue-ko.png" alt="Git Chunk 작동 방식: 큰 파일을 청크로 나누어 코드와 같은 Git 저장소에 보관하고, 체크아웃할 때 원본으로 복원합니다." width="100%">
+</p>
 
 ## 설치 후에는 어떻게 사용하나요?
 

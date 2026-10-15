@@ -1,12 +1,23 @@
-# Git Chunk
+<p align="center">
+  <img src="docs/assets/git-chunk-logo-blue.png" alt="Git Chunk" width="420">
+</p>
+<p align="center"><strong>Large files. One Git repository.</strong></p>
+<p align="center">
+  <a href="https://github.com/MDJ0126/GitChunk/releases/latest">Download</a> &middot;
+  <a href="#install-and-set-up-your-project">Guide</a> &middot;
+  <a href="README.md">English</a> &middot;
+  <a href="README.ko.md">한국어</a>
+</p>
 
-[한국어](README.ko.md)
+---
 
 **Keep large files in Git and work as usual.**
 
 Install Git Chunk and set it up once for your project. Then **edit your original files and commit, push, and pull as usual**. You do not need to split files or put them back together yourself. No .NET SDK is needed.
 
-![Large files are split automatically for storage and restored to originals when checked out.](docs/assets/git-chunk-overview.png)
+<p align="center">
+  <img src="docs/assets/git-chunk-hero-blue.png" alt="How Git Chunk works: large files are split into chunks alongside code in the same Git repository and restored on checkout." width="100%">
+</p>
 
 ## What changes in everyday use?
 
