@@ -11,6 +11,8 @@
   <a href="README.ko.md">한국어</a>
 </p>
 
+**[📖 문서 사이트 바로가기](https://mdj0126.github.io/GitChunk/)** · [한국어 사용 가이드](https://mdj0126.github.io/GitChunk/guide.ko.html)
+
 ---
 
 **큰 파일도 Git으로 관리하고, 작업은 평소처럼 하세요.**
