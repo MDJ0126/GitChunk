@@ -11,3 +11,16 @@
 .download-actions{margin:26px 0 21px}.download-button{display:inline-flex;align-items:center;justify-content:center;gap:11px;padding:13px 20px;border:1px solid #2563eb;border-radius:7px;background:#2563eb;color:#fff;text-decoration:none;font-size:15px;font-weight:700;box-shadow:0 3px 8px #2563eb16;transition:background .15s}.download-button:hover{background:#1d4ed8}.download-button:focus-visible{outline:3px solid #38bdf8;outline-offset:4px}.download-button span{font-size:11px;font-weight:500;opacity:.8}.download-alternatives{display:flex;align-items:center;gap:10px;margin-top:10px;color:var(--muted);font-size:12px}.download-alternatives a{color:var(--muted)}@media(max-width:400px){.download-button{width:100%;padding:13px 10px}}
 
 nav .language-switch{padding:3px 11px;border:1px solid #cbdcf6;border-radius:6px;color:var(--blue);font-weight:650;white-space:nowrap}nav{align-items:center}nav .language-switch:hover{background:#eff6ff}
+/* Theme controls and dark palette shared by landing pages and guides. */
+:root{color-scheme:light;--surface:#fff;--code-bg:#f2f5f9}
+:root[data-theme="dark"]{color-scheme:dark;--ink:#e3edf9;--muted:#a5b5c9;--blue:#77adff;--sky:#5ccfff;--line:#2b3c52;--paper:#111c2c;--surface:#0c1523;--code-bg:#172338}
+body{background:var(--surface)}.hero{background:var(--paper)}.brand-name{color:var(--ink)}pre{background:var(--code-bg)}
+nav .theme-toggle{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:32px;height:32px;padding:0;margin-left:-14px;border:1px solid var(--line);border-radius:6px;color:var(--muted);background:transparent;cursor:pointer}
+nav .theme-toggle:hover{color:var(--blue);background:var(--code-bg)}.theme-toggle:focus-visible{outline:2px solid var(--sky);outline-offset:3px}.sun-icon{display:none}[data-theme="dark"] .sun-icon{display:block}[data-theme="dark"] .moon-icon{display:none}
+[data-theme="dark"] nav .language-switch{border-color:#38516f}[data-theme="dark"] nav .language-switch:hover{background:#172c45}[data-theme="dark"] .number{background:#172c45;border-color:#38516f}[data-theme="dark"] .guide-article code:not(pre code){background:var(--code-bg)}
+[data-theme="dark"] .workflow text{fill:var(--ink)}[data-theme="dark"] .workflow .flow-label,[data-theme="dark"] .workflow .pill-label{fill:var(--blue)}
+[data-theme="dark"] .workflow rect[fill="#fff"]{fill:#142134}[data-theme="dark"] .workflow rect[stroke="#cdd6e2"],[data-theme="dark"] .workflow rect[stroke="#e1e6ed"]{stroke:#34475e}
+[data-theme="dark"] .workflow #document{stroke:#c8d7e9}[data-theme="dark"] .workflow path[fill="#f5faff"]{fill:#172c45}[data-theme="dark"] .workflow rect[fill="#e0f2fe"]{fill:#172f4c}
+[data-theme="dark"] .workflow g[stroke="#2563eb"]{stroke:#77adff}[data-theme="dark"] .workflow #arrow path{fill:#77adff}
+[data-theme="dark"] .download-button{background:#2563eb;color:#fff}[data-theme="dark"] .download-button:hover{background:#1d4ed8}
+@media(max-width:760px){nav .theme-toggle{margin-left:-7px}}
