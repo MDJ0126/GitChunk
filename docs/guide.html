@@ -1,0 +1,44 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Git Chunk — User guide</title><meta name="description" content="Install, use, update, migrate from LFS, and uninstall Git Chunk"><link rel="icon" href="assets/git-chunk-symbol.svg" type="image/svg+xml"><link rel="stylesheet" href="assets/site.css"></head><body><header><div class="wrap header"><a class="brand" href="index.html" aria-label="Git Chunk"><img src="assets/git-chunk-symbol.svg" alt=""><span class="brand-name">Git Chunk</span></a><nav aria-label="Main navigation"><a href="index.html#getting-started">Getting started</a><a href="guide.html">Guide</a><a href="https://github.com/MDJ0126/GitChunk">Source</a><a href="guide.ko.html" lang="ko">한국어</a></nav></div></header><main class="wrap guide-layout"><aside class="guide-toc" aria-label="Contents"><strong>User guide</strong><a href="#install">Install</a>
+<a href="#use">Use</a>
+<a href="#convert-an-existing-git-lfs-project">Convert an existing Git LFS project</a>
+<a href="#uninstall-from-a-repository">Uninstall from a repository</a></aside><article class="guide-article"><span class="eyebrow">Git Chunk / Documentation</span><h1>User guide</h1><p><strong>Manage large assets without Git LFS.</strong> Git stores chunks automatically while you work with full originals locally. No .NET SDK needed.</p>
+<h2 id="install">Install</h2>
+<p><strong>Windows</strong> — <a href="https://github.com/MDJ0126/GitChunk/releases/latest">Download the installer</a>, or with Scoop:</p>
+<pre><code class="language-powershell">scoop bucket add gitchunk https://github.com/MDJ0126/GitChunk.git
+scoop install gitchunk/git-chunk</code></pre>
+<p><strong>Mac</strong> — with Homebrew:</p>
+<pre><code class="language-bash">brew tap MDJ0126/gitchunk https://github.com/MDJ0126/GitChunk
+brew install --cask MDJ0126/gitchunk/git-chunk</code></pre>
+<h2 id="use">Use</h2>
+<p>Run <code>git chunk update</code> at the repository root to download the latest release, verify its checksum, and apply it to that repository. Subsequent <code>git chunk</code> commands forward to the verified new executable. Apply it to other repositories with <code>git chunk install</code>. Use <code>git chunk version</code> to inspect the executable and version.</p>
+<p><code>git chunk install</code> applies the running version and reports a newer release when available. Versions without the updater require a one-time upgrade through the installer or package manager first. Unpublished local changes are not downloaded from public releases.</p>
+<p>Run once in your project's Git repository root, including after cloning on a new PC:</p>
+<pre><code class="language-bash">git chunk install</code></pre>
+<p>For existing tracked files, apply and commit the configuration:</p>
+<pre><code class="language-bash">git add -u
+git add --renormalize .
+git add .gitattributes .gitignore .gitchunk
+git commit -m &quot;Configure Git Chunk&quot;</code></pre>
+<p>Then use Git as usual. The app also supports setup: select your project and click <strong>Install Git Chunk</strong>.</p>
+<p>Files over <strong>50 MiB</strong> become chunks of up to <strong>49 MiB</strong> by default. Add paths to the repository-root <code>.chunkignore</code> to store matching files whole, or edit the ignore list in the app. For example, <code>Build/**</code> excludes every file under Build from chunking. An empty ignore list excludes nothing. Do not delete <code>.gitchunk/objects</code>.</p>
+<h2 id="convert-an-existing-git-lfs-project">Convert an existing Git LFS project</h2>
+<p>The current release supports automatic LFS conversion. To run <code>GitChunk.exe</code> directly, stay in the target repository root and replace the install command below with the actual executable path followed by <code>install</code>.</p>
+<ol>
+<li>In the target repository root, commit or stash tracked changes first. Downloading missing originals requires Git LFS and remote access.</li>
+<li>Run the commands below. Installation obtains missing originals, verifies size and SHA-256, converts LFS attributes and standard hooks, verifies conversion/restoration, and stages the result.</li>
+</ol>
+<pre><code class="language-bash">git chunk install
+git diff --cached
+git commit -m &quot;Convert current LFS files to Git Chunk&quot;
+git push</code></pre>
+<p>Current LFS files <strong>over 50 MiB</strong> become chunks; files at or below that size become ordinary Git files. Large LFS files excluded by <code>.chunkignore</code> or custom commit/push hooks stop conversion with instructions. Installation never commits or pushes automatically. Failed conversion restores the original index, settings and hooks.</p>
+<p><strong>After conversion, edit originals and use add/commit/push as usual.</strong> Adding files chunks them automatically; the commit hook includes required chunks. Pull/checkout restores originals automatically. On a new computer, clone and run <code>git chunk install</code> once.</p>
+<p><strong>Past commits and existing server LFS objects/storage usage are preserved.</strong> Keep Git LFS and the corresponding originals to use historical LFS versions.</p>
+<p>To reclaim server LFS storage, first upload and verify the converted project. If you only need the latest version, back up the old repository and publish a new root commit containing the verified latest tree; this removes the old history from the published branch. Check every remote branch and tag for remaining LFS references before requesting deletion. A Git bundle backs up Git history, but does not contain LFS payloads; back those up separately if needed.</p>
+<p>Save <code>git lfs ls-files --all --long</code> <strong>before</strong> removing the old history to obtain the historical object IDs and paths. This lists objects referenced by available Git history, not a server inventory or billing total. Submit the repository URLs, old object IDs and verified new commit IDs through <a href="https://support.github.com/">GitHub Support</a>. GitChunk does not delete remote LFS objects. <a href="https://docs.github.com/en/repositories/working-with-files/managing-large-files/removing-files-from-git-large-file-storage">GitHub documents that removed LFS objects continue to consume storage until purged</a>.</p>
+<p>LFS migration also converts existing large ordinary Git files and batches LFS pointer discovery. This covers mixed repositories containing both LFS resources and large build files.</p>
+<p><a href="https://github.com/MDJ0126/GitChunk/blob/main/Packaging/README.md">Distribution details</a> · <a href="https://github.com/MDJ0126/GitChunk/blob/main/INSTRUCTIONS.md">Technical notes</a></p>
+<p><code>.gitchunk/chunks.txt</code> lists original paths (JSON strings) and ordered chunk IDs. Installation rebuilds it from existing indexed pointers; the commit hook refreshes and stages it from staged files, including renames and deletions. Restoration still uses the original pointers. Updates archive old presets under the Git metadata directory.</p>
+<p><code>.chunkignore</code> supports one pattern per line, <code>#</code> comments, <code>*</code>, <code>**</code>, <code>?</code>, a leading <code>/</code> for root paths, and a trailing <code>/</code> for directory contents. Plain patterns exclude files from chunking; <code>!</code> can re-enable a matching file (last match wins). This affects chunking only; excluded files are still tracked by Git. It does not implement every <code>.gitignore</code> syntax feature. Existing <code>.gitchunk/rules.txt</code> settings are converted while preserving their selection and backed up under Git metadata as <code>gitchunk/rules-backup-*.txt</code>; the old settings file is removed.</p>
+<h2 id="uninstall-from-a-repository">Uninstall from a repository</h2>
+<p>Run <code>git chunk uninstall</code> in the repository root, or choose <strong>Uninstall</strong> in the app. Commit or stash tracked changes first. The command verifies and converts current chunked files smaller than 100 MiB to ordinary Git files, removes managed filters/hooks and project configuration, and stages the result. It does not commit, push, remove global commands, or affect other repositories. Files of 100 MiB or more block removal before configuration is changed; move them to another storage method first. Custom hooks and unrelated attributes/settings are preserved. A local recovery backup is kept in Git metadata. Historical chunked commits still require reinstalling Git Chunk.</p></article></main><footer><div class="wrap footer-inner"><span>Git Chunk · A familiar Git workflow for large files.</span><a href="https://github.com/MDJ0126/GitChunk/issues">GitHub Issues ↗</a></div></footer></body></html>

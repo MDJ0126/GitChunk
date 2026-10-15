@@ -1,10 +1,12 @@
 <p align="center">
-  <img src="docs/assets/git-chunk-logo-blue.png" alt="Git Chunk" width="420">
+  <img src="docs/assets/git-chunk-symbol.svg" alt="Git Chunk logo" width="56">
 </p>
+<h1 align="center">Git Chunk</h1>
 <p align="center"><strong>Large files. One Git repository.</strong></p>
 <p align="center">
   <a href="https://github.com/MDJ0126/GitChunk/releases/latest">Download</a> &middot;
-  <a href="#install-and-set-up-your-project">Guide</a> &middot;
+  <a href="https://mdj0126.github.io/GitChunk/">Website</a> &middot;
+  <a href="https://mdj0126.github.io/GitChunk/guide.html">Guide</a> &middot;
   <a href="README.md">English</a> &middot;
   <a href="README.ko.md">한국어</a>
 </p>
@@ -92,7 +94,7 @@ git commit -m "Convert current LFS files to Git Chunk"
 git push
 ```
 
-Conversion automatically prepares the changes for a commit. You commit and push them yourself. **Past LFS data stays in place; existing LFS storage is not automatically freed.** See the [conversion guide](docs/guide.md#convert-an-existing-git-lfs-project) for details.
+Conversion automatically prepares the changes for a commit. You commit and push them yourself. **Past LFS data stays in place; existing LFS storage is not automatically freed.** See the [conversion guide](https://mdj0126.github.io/GitChunk/guide.html#convert-an-existing-git-lfs-project) for details.
 
 ## Updates and extra settings
 
@@ -106,6 +108,6 @@ Older versions without this command need a one-time upgrade through the installe
 
 By default, files **over 50 MiB** are split into chunks of up to **49 MiB**. Use the app's exclusion list or `.chunkignore` for files you want to keep whole. Do not delete the automatically created `.gitchunk/objects` folder: it is needed to restore files.
 
-[Detailed usage and uninstall](docs/guide.md) · [Distribution](Packaging/README.md) · [Technical notes](INSTRUCTIONS.md)
+[Detailed usage and uninstall](https://mdj0126.github.io/GitChunk/guide.html) · [Distribution](Packaging/README.md) · [Technical notes](INSTRUCTIONS.md)
 
 Comparison references: [Git LFS documentation](https://github.com/git-lfs/git-lfs/blob/main/docs/man/git-lfs.adoc), [GitHub LFS storage and billing](https://docs.github.com/en/billing/concepts/product-billing/git-lfs).

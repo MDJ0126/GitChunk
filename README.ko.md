@@ -1,10 +1,12 @@
 <p align="center">
-  <img src="docs/assets/git-chunk-logo-blue.png" alt="Git Chunk" width="420">
+  <img src="docs/assets/git-chunk-symbol.svg" alt="Git Chunk logo" width="56">
 </p>
+<h1 align="center">Git Chunk</h1>
 <p align="center"><strong>큰 파일도, 하나의 Git 저장소에서.</strong></p>
 <p align="center">
   <a href="https://github.com/MDJ0126/GitChunk/releases/latest">다운로드</a> &middot;
-  <a href="docs/guide.md">사용 가이드</a> &middot;
+  <a href="https://mdj0126.github.io/GitChunk/index.ko.html">웹사이트</a> &middot;
+  <a href="https://mdj0126.github.io/GitChunk/guide.ko.html">사용 가이드</a> &middot;
   <a href="README.md">English</a> &middot;
   <a href="README.ko.md">한국어</a>
 </p>
@@ -92,7 +94,7 @@ git commit -m "Convert current LFS files to Git Chunk"
 git push
 ```
 
-전환 결과는 커밋할 준비까지 자동으로 처리됩니다. 커밋과 푸시는 직접 하셔야 합니다. **과거 LFS 데이터는 그대로 남으며, 기존 LFS 저장 용량이 자동으로 비워지지는 않습니다.** 자세한 내용은 [전환 안내](docs/guide.ko.md#기존-git-lfs-프로젝트-전환)를 참고하세요.
+전환 결과는 커밋할 준비까지 자동으로 처리됩니다. 커밋과 푸시는 직접 하셔야 합니다. **과거 LFS 데이터는 그대로 남으며, 기존 LFS 저장 용량이 자동으로 비워지지는 않습니다.** 자세한 내용은 [전환 안내](https://mdj0126.github.io/GitChunk/guide.ko.html#기존-git-lfs-프로젝트-전환)를 참고하세요.
 
 ## 업데이트와 추가 설정
 
@@ -106,6 +108,6 @@ git chunk update
 
 기본적으로 **50 MiB 초과** 파일을 최대 **49 MiB**씩 나누어 저장합니다. 나누고 싶지 않은 파일은 앱의 제외 목록이나 `.chunkignore`에 지정할 수 있습니다. 자동으로 만들어지는 `.gitchunk/objects` 폴더는 파일 복원에 필요하므로 삭제하지 마세요.
 
-[상세 사용법 및 제거 방법](docs/guide.ko.md) · [배포 정보](Packaging/README.md) · [기술 설명](INSTRUCTIONS.md)
+[상세 사용법 및 제거 방법](https://mdj0126.github.io/GitChunk/guide.ko.html) · [배포 정보](Packaging/README.md) · [기술 설명](INSTRUCTIONS.md)
 
 비교 참고: [Git LFS 공식 문서](https://github.com/git-lfs/git-lfs/blob/main/docs/man/git-lfs.adoc), [GitHub LFS 용량·요금 안내](https://docs.github.com/en/billing/concepts/product-billing/git-lfs).
