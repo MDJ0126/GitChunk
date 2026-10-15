@@ -4,7 +4,7 @@
 <h1 align="center">Git Chunk</h1>
 <p align="center"><strong>큰 파일도, 하나의 Git 저장소에서.</strong></p>
 <p align="center">
-  <a href="https://github.com/MDJ0126/GitChunk/releases/latest">다운로드</a> &middot;
+  <a href="https://github.com/MDJ0126/GitChunk/releases/latest/download/GitChunk-Setup-win-x64.exe">다운로드</a> &middot;
   <a href="https://mdj0126.github.io/GitChunk/index.ko.html">웹사이트</a> &middot;
   <a href="https://mdj0126.github.io/GitChunk/guide.ko.html">사용 가이드</a> &middot;
   <a href="README.md">English</a> &middot;
