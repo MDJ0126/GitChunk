@@ -5,13 +5,11 @@
 <p align="center"><strong>Large files. One Git repository.</strong></p>
 <p align="center">
   <a href="https://github.com/MDJ0126/GitChunk/releases/latest/download/GitChunk-Setup-win-x64.exe">Download</a> &middot;
-  <a href="https://mdj0126.github.io/GitChunk/">Website</a> &middot;
-  <a href="https://mdj0126.github.io/GitChunk/guide.html">Guide</a> &middot;
+  <a href="https://mdj0126.github.io/GitChunk/"><strong>Documentation</strong></a> &middot;
+  <a href="https://mdj0126.github.io/GitChunk/guide.html">User guide</a> &middot;
   <a href="README.md">English</a> &middot;
   <a href="README.ko.md">한국어</a>
 </p>
-
-**[📖 Read the documentation](https://mdj0126.github.io/GitChunk/)** · [User guide](https://mdj0126.github.io/GitChunk/guide.html)
 
 ---
 

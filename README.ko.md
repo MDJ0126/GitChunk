@@ -5,13 +5,11 @@
 <p align="center"><strong>큰 파일도, 하나의 Git 저장소에서.</strong></p>
 <p align="center">
   <a href="https://github.com/MDJ0126/GitChunk/releases/latest/download/GitChunk-Setup-win-x64.exe">다운로드</a> &middot;
-  <a href="https://mdj0126.github.io/GitChunk/">웹사이트</a> &middot;
+  <a href="https://mdj0126.github.io/GitChunk/"><strong>문서 사이트</strong></a> &middot;
   <a href="https://mdj0126.github.io/GitChunk/guide.ko.html">사용 가이드</a> &middot;
   <a href="README.md">English</a> &middot;
   <a href="README.ko.md">한국어</a>
 </p>
-
-**[📖 문서 사이트 바로가기](https://mdj0126.github.io/GitChunk/)** · [한국어 사용 가이드](https://mdj0126.github.io/GitChunk/guide.ko.html)
 
 ---
 
