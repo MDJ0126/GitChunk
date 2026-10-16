@@ -21,6 +21,12 @@ Install Git Chunk and set it up once for your project. Then **edit your original
   <img src="docs/assets/git-chunk-hero-blue.png" alt="How Git Chunk works: large files are split into chunks alongside code in the same Git repository and restored on checkout." width="100%">
 </p>
 
+<p align="center">
+  <a href="https://mdj0126.github.io/GitChunk/">
+    <img src="docs/assets/website-button.svg" alt="Visit the Git Chunk website" width="224" height="48">
+  </a>
+</p>
+
 ## What changes in everyday use?
 
 1. Edit images, videos, game assets, and other files in your usual programs.

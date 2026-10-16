@@ -21,6 +21,12 @@ Git Chunk를 설치하고 프로젝트에 한 번 적용하면, 이후에는 **�
   <img src="docs/assets/git-chunk-hero-blue-ko.png" alt="Git Chunk 작동 방식: 큰 파일을 청크로 나누어 코드와 같은 Git 저장소에 보관하고, 체크아웃할 때 원본으로 복원합니다." width="100%">
 </p>
 
+<p align="center">
+  <a href="https://mdj0126.github.io/GitChunk/index.ko.html">
+    <img src="docs/assets/website-button-ko.svg" alt="Git Chunk 문서 사이트로 이동" width="224" height="48">
+  </a>
+</p>
+
 ## 설치 후에는 어떻게 사용하나요?
 
 1. 이미지, 영상, 게임 리소스 등을 기존 프로그램에서 그대로 편집합니다.
