@@ -45,6 +45,8 @@ Then use Git as usual. The app also supports setup: select your project and clic
 
 Files over **50 MiB** become chunks of up to **49 MiB** by default. Add paths to the repository-root `.chunkignore` to store matching files whole, or edit the ignore list in the app. For example, `Build/**` excludes every file under Build from chunking. An empty ignore list excludes nothing. Do not delete `.gitchunk/objects`.
 
+Git Chunk does not currently support RAID-style redundancy or parity-based recovery of missing or corrupted chunks. These recovery features are under consideration; implementation and timing have not been decided.
+
 ## Convert an existing Git LFS project
 
 The current release supports automatic LFS conversion. To run `GitChunk.exe` directly, stay in the target repository root and replace the install command below with the actual executable path followed by `install`.

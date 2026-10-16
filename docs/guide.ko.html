@@ -21,6 +21,7 @@ git add .gitattributes .gitignore .gitchunk
 git commit -m &quot;Configure Git Chunk&quot;</code></pre>
 <p>이후 평소처럼 Git을 사용하시면 됩니다. 앱에서도 프로젝트를 선택하고 <strong>Install Git Chunk</strong>를 눌러 설정할 수 있습니다.</p>
 <p>기본적으로 <strong>50 MiB 초과</strong> 파일을 최대 <strong>49 MiB</strong> 조각으로 저장합니다. 분할하지 않을 파일은 저장소 루트의 <code>.chunkignore</code> 또는 앱의 제외 목록에 적습니다. 예를 들어 <code>Build/**</code>를 적으면 Build 안의 파일을 원본 그대로 Git에 저장합니다. 빈 목록은 아무 파일도 제외하지 않습니다. <code>.gitchunk/objects</code>는 삭제하지 마세요.</p>
+<p>현재 RAID 방식의 중복 저장이나 패리티 기반의 손실·손상 청크 복구는 지원하지 않습니다. 이러한 복구 기능은 향후 도입을 검토 중이며, 구현 여부와 일정은 정해지지 않았습니다.</p>
 <h2 id="기존-git-lfs-프로젝트-전환">기존 Git LFS 프로젝트 전환</h2>
 <p>현재 릴리스는 LFS 자동 전환을 지원합니다. <code>GitChunk.exe</code>를 직접 실행할 때는 대상 프로젝트 폴더에서 아래 설치 명령 대신 실행 파일의 실제 경로를 지정하여 <code>GitChunk.exe install</code>을 실행합니다.</p>
 <ol>

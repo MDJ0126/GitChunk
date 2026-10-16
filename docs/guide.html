@@ -21,6 +21,7 @@ git add .gitattributes .gitignore .gitchunk
 git commit -m &quot;Configure Git Chunk&quot;</code></pre>
 <p>Then use Git as usual. The app also supports setup: select your project and click <strong>Install Git Chunk</strong>.</p>
 <p>Files over <strong>50 MiB</strong> become chunks of up to <strong>49 MiB</strong> by default. Add paths to the repository-root <code>.chunkignore</code> to store matching files whole, or edit the ignore list in the app. For example, <code>Build/**</code> excludes every file under Build from chunking. An empty ignore list excludes nothing. Do not delete <code>.gitchunk/objects</code>.</p>
+<p>Git Chunk does not currently support RAID-style redundancy or parity-based recovery of missing or corrupted chunks. These recovery features are under consideration; implementation and timing have not been decided.</p>
 <h2 id="convert-an-existing-git-lfs-project">Convert an existing Git LFS project</h2>
 <p>The current release supports automatic LFS conversion. To run <code>GitChunk.exe</code> directly, stay in the target repository root and replace the install command below with the actual executable path followed by <code>install</code>.</p>
 <ol>

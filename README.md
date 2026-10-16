@@ -44,6 +44,8 @@ Both help manage large files while **you keep working with the originals as usua
 
 Splitting files does not reduce their total size. Your Git host's storage limits still apply.
 
+Git Chunk does not currently support RAID-style redundancy or parity-based recovery of missing or corrupted chunks. These recovery features are under consideration; implementation and timing have not been decided.
+
 ## Install and set up your project
 
 ### 1. Install Git Chunk
