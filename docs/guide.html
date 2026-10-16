@@ -8,7 +8,7 @@
 scoop install gitchunk/git-chunk</code></pre>
 <p><strong>Mac</strong> — with Homebrew:</p>
 <pre><code class="language-bash">brew tap MDJ0126/gitchunk https://github.com/MDJ0126/GitChunk
-brew install --cask MDJ0126/gitchunk/git-chunk</code></pre>
+brew install --cask MDJ0126/gitchunk/git-chunk</code></pre><p><strong>Linux x64</strong> — <a href="https://github.com/MDJ0126/GitChunk/releases/latest/download/GitChunk-linux-x64.zip">Download the ZIP</a>, extract it, then run <code>sh install.sh</code> in that folder. Ubuntu/Debian: <code>sudo apt install git python3-tk</code>. Open Git Chunk from the application menu. Add <code>~/.local/bin</code> to PATH for <code>git chunk</code>. Requires glibc Linux; the .NET runtime is included.</p>
 <h2 id="use">Use</h2>
 <p>Run <code>git chunk update</code> at the repository root to download the latest release, verify its checksum, and apply it to that repository. Subsequent <code>git chunk</code> commands forward to the verified new executable. Apply it to other repositories with <code>git chunk install</code>. Use <code>git chunk version</code> to inspect the executable and version.</p>
 <p><code>git chunk install</code> applies the running version and reports a newer release when available. Versions without the updater require a one-time upgrade through the installer or package manager first. Unpublished local changes are not downloaded from public releases.</p>

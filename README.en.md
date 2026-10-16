@@ -70,6 +70,8 @@ brew tap MDJ0126/gitchunk https://github.com/MDJ0126/GitChunk
 brew install --cask MDJ0126/gitchunk/git-chunk
 ```
 
+**Linux x64:** [Download the ZIP](https://github.com/MDJ0126/GitChunk/releases/latest/download/GitChunk-linux-x64.zip), extract it, and run `sh install.sh` inside the extracted folder. On Ubuntu/Debian, install `git python3-tk` first. Open **Git Chunk** from the application menu, or use `~/.local/bin/gitchunk`. Add `~/.local/bin` to PATH for `git chunk`. The .NET runtime is included. This package targets glibc Linux; it does not support Alpine/musl.
+
 ### 2. Apply it to your project
 
 Select the project folder in the Git Chunk app and click **Install Git Chunk**. Or run this command in the top-level folder of your project's Git repository:

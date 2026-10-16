@@ -86,7 +86,7 @@ with tempfile.TemporaryDirectory(prefix='GitChunk-uninstall-') as temp:
     assert note.exists()
     (root / '.git/index.lock').unlink()
     # Execute directly from the repository tool to cover Windows executable locks.
-    repo_tool = root / '.gitchunk' / ('GitChunk.exe' if os.name == 'nt' else ('GitChunk-osx-arm64' if os.uname().machine == 'arm64' else 'GitChunk-osx-x64'))
+    repo_tool = root / '.gitchunk' / ('GitChunk.exe' if os.name == 'nt' else 'GitChunk-' + ('linux-' if sys.platform.startswith('linux') else 'osx-') + ('arm64' if os.uname().machine in ('arm64', 'aarch64') else 'x64'))
     run(root, str(repo_tool), 'uninstall', str(root))
     assert not (root / '.gitchunk').exists() and not (root / '.chunkignore').exists()
     assert (root / '.git/hooks/pre-push').read_bytes() == custom

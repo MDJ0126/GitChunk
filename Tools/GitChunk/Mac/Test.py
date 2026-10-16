@@ -58,7 +58,7 @@ with tempfile.TemporaryDirectory(prefix="GitChunk-native-") as temp:
     run(writer, "git", "config", "filter.gitchunk.required", "true")
     installed = writer / ".gitchunk" / (
         "GitChunk.exe" if os.name == "nt" else
-        "GitChunk-osx-" + ("arm64" if os.uname().machine == "arm64" else "x64")
+        "GitChunk-" + ("linux-" if sys.platform.startswith("linux") else "osx-") + ("arm64" if os.uname().machine in ("arm64", "aarch64") else "x64")
     )
     assert installed.exists()
     if os.name != "nt":

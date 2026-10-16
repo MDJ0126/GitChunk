@@ -13,7 +13,7 @@ static partial class GitIntegration
     const int ChunkSize = 49 * 1024 * 1024;
     const string Prefix = ProjectIdentity.PointerPrefix;
     const string Store = ProjectIdentity.Objects;
-    static string InstalledToolName => OperatingSystem.IsWindows() ? "GitChunk.exe" : "GitChunk-osx-" + (RuntimeInformation.ProcessArchitecture == Architecture.Arm64 ? "arm64" : "x64");
+    static string InstalledToolName => OperatingSystem.IsWindows() ? "GitChunk.exe" : "GitChunk-" + (OperatingSystem.IsLinux() ? "linux-" : "osx-") + (RuntimeInformation.ProcessArchitecture == Architecture.Arm64 ? "arm64" : "x64");
     static string Quote(string path) => "'" + path.Replace('\\', '/').Replace("'", "'\\''") + "'";
     static string RuntimeTool() => Path.Combine(Path.GetFullPath(Text("rev-parse", "--git-path", ProjectIdentity.Id)), InstalledToolName);
     static void MigrateLegacyStorage(string root)
@@ -42,7 +42,7 @@ static partial class GitIntegration
         try { Directory.Move(legacy, backup); Console.WriteLine("Legacy storage migrated to .gitchunk; backup retained in Git metadata."); }
         catch (IOException) { Console.WriteLine(("Legacy chunks copied and verified. Close any legacy app, then reinstall to archive ." + ProjectIdentity.LegacyId + ".")); }
     }
-    static bool ToolPath(string path) => path is "GitChunk.exe" or ".gitchunk/GitChunk.exe" or "GitChunk-osx-arm64" or "GitChunk-osx-x64" or ".gitchunk/GitChunk-osx-arm64" or ".gitchunk/GitChunk-osx-x64" or (ProjectIdentity.LegacyName + ".exe") or ("." + ProjectIdentity.LegacyId + "/" + ProjectIdentity.LegacyName + ".exe") or (ProjectIdentity.LegacyName + "-osx-arm64") or (ProjectIdentity.LegacyName + "-osx-x64") or ("." + ProjectIdentity.LegacyId + "/" + ProjectIdentity.LegacyName + "-osx-arm64") or ("." + ProjectIdentity.LegacyId + "/" + ProjectIdentity.LegacyName + "-osx-x64");
+    static bool ToolPath(string path) => path is "GitChunk-linux-x64" or "GitChunk-linux-arm64" or ".gitchunk/GitChunk-linux-x64" or ".gitchunk/GitChunk-linux-arm64" or "GitChunk.exe" or ".gitchunk/GitChunk.exe" or "GitChunk-osx-arm64" or "GitChunk-osx-x64" or ".gitchunk/GitChunk-osx-arm64" or ".gitchunk/GitChunk-osx-x64" or (ProjectIdentity.LegacyName + ".exe") or ("." + ProjectIdentity.LegacyId + "/" + ProjectIdentity.LegacyName + ".exe") or (ProjectIdentity.LegacyName + "-osx-arm64") or (ProjectIdentity.LegacyName + "-osx-x64") or ("." + ProjectIdentity.LegacyId + "/" + ProjectIdentity.LegacyName + "-osx-arm64") or ("." + ProjectIdentity.LegacyId + "/" + ProjectIdentity.LegacyName + "-osx-x64");
     record Chunk(string Oid, int Size, string Sha256);
     record Pointer(long Size, string Sha256, List<Chunk> Chunks);
 

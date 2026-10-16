@@ -28,7 +28,7 @@ static class ToolUpdate
         var active = JsonSerializer.Deserialize<Active>(File.ReadAllText(Manifest)) ?? throw new Exception("Invalid update manifest.");
         if (!Version.TryParse(active.Version, out var version) || version <= Current) return null;
         var path = Path.GetFullPath(Path.Combine(Cache, active.Executable));
-        if (!path.StartsWith(Path.GetFullPath(Cache) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)) throw new Exception("Invalid update executable path.");
+        if (!path.StartsWith(Path.GetFullPath(Cache) + Path.DirectorySeparatorChar, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal)) throw new Exception("Invalid update executable path.");
         using (var file = File.OpenRead(path))
             if (Convert.ToHexString(SHA256.HashData(file)) != active.Sha256) throw new Exception("Updated executable checksum mismatch. Run git chunk update to repair it.");
         var start = new ProcessStartInfo(path) { UseShellExecute = false };
@@ -83,9 +83,9 @@ static class ToolUpdate
             return GitIntegration.Run(new[] { "git-install", root });
         }
         var windows = OperatingSystem.IsWindows();
-        if (!windows && !OperatingSystem.IsMacOS()) throw new Exception("Automatic updates support Windows and macOS.");
+        if (!windows && !OperatingSystem.IsMacOS() && !OperatingSystem.IsLinux()) throw new Exception("Unsupported operating system.");
         var arch = RuntimeInformation.ProcessArchitecture == Architecture.Arm64 ? "arm64" : "x64";
-        var name = windows ? "GitChunk-Windows-x64.zip" : $"GitChunk-osx-{arch}.zip";
+        var name = windows ? "GitChunk-Windows-x64.zip" : $"GitChunk-{(OperatingSystem.IsLinux() ? "linux" : "osx")}-{arch}.zip";
         var sums = await client.GetStringAsync(Asset(release.RootElement, "SHA256SUMS"));
         var expected = sums.Split('\n', StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim().Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)).SingleOrDefault(x => x.Length == 2 && x[1].TrimStart('*') == name);
         if (expected == null || expected[0].Length != 64 || !expected[0].All(Uri.IsHexDigit)) throw new Exception("Release checksum missing: " + name);
@@ -96,7 +96,7 @@ static class ToolUpdate
         var folder = Path.Combine(Cache, version + "-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(folder);
         using var zip = new ZipArchive(new MemoryStream(bytes));
-        var entryName = windows ? "GitChunk.exe" : "GitChunk.app/Contents/MacOS/GitChunk-cli";
+        var entryName = windows ? "GitChunk.exe" : OperatingSystem.IsLinux() ? "git-chunk" : "GitChunk.app/Contents/MacOS/GitChunk-cli";
         var entry = zip.GetEntry(entryName) ?? throw new Exception("Executable missing from release.");
         var executable = Path.Combine(folder, windows ? "GitChunk.exe" : "git-chunk");
         entry.ExtractToFile(executable);

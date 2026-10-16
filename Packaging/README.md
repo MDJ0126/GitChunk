@@ -13,3 +13,11 @@ Apply Git Chunk once per repository and computer with `git chunk install`, or se
 Builds are not publisher-signed or Apple-notarized. OS trust prompts may appear. The project provides its own Scoop bucket and Homebrew tap; no public winget, Homebrew core, or npm registry entry is claimed.
 
 For installation commands, see the [English README](../README.en.md). Workflow results and release assets provide the verification record for each publication; do not treat an uncompleted workflow as a published release.
+
+## Linux v1.0.0 platform addition
+
+Build locally with `python3 Tools/GitChunk/Linux/Build.py linux-x64`. This creates `dist/GitChunk-linux-x64.zip` with a self-contained CLI, Python/Tk desktop, and per-user installer. No GitHub Actions run is needed. The desktop requires Python 3/Tk; the CLI only needs Git and the distribution's .NET native dependencies. The package targets glibc distributions, not Alpine/musl. It has been verified on Ubuntu 24.04 x64.
+
+For the existing v1.0.0 release, upload the Linux ZIP, extend SHA256SUMS while preserving every existing entry, and append Linux installation/validation information to the release body. Preserve the existing tag and Windows/macOS asset IDs and hashes. Linux source is linked to its main-branch commit because the original v1.0.0 tag is unchanged.
+
+Linux verification: run `Mac/Test.py`, `Test-Rules.py`, `Test-Uninstall.py`, `Test-Identity.py`, `Linux/Test-Lfs.py`, and `Linux/Test-Gui.py` against the extracted CLI/package. Run the cross-platform `Tests/Updater` fixture with a Linux 1.3.0 fixture executable; these test versions are never published. Use Xvfb for the GUI test on a headless Linux machine.

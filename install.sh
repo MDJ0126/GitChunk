@@ -1,6 +1,6 @@
 #!/bin/bash
 set -euo pipefail
-if [[ "$(uname -s)" != "Darwin" ]]; then echo 'This installer targets macOS. Use Install.ps1 on Windows.' >&2; exit 1; fi
+case "$(uname -s)" in Darwin) platform=osx ;; Linux) platform=linux ;; *) echo 'Use Install.ps1 on Windows.' >&2; exit 1 ;; esac
 command -v git >/dev/null || { echo 'Git is required.' >&2; exit 1; }
 command -v dotnet >/dev/null || { echo '.NET 9 SDK is required for installation from source.' >&2; exit 1; }
 repo="${1:-$PWD}"
@@ -14,7 +14,7 @@ else
   source_root="$work/source"
   git clone --depth 1 https://github.com/MDJ0126/GitChunk.git "$source_root"
 fi
-case "$(uname -m)" in arm64) rid=osx-arm64 ;; x86_64) rid=osx-x64 ;; *) echo 'Unsupported CPU architecture.' >&2; exit 1 ;; esac
+case "$(uname -m)" in arm64|aarch64) rid="$platform-arm64" ;; x86_64) rid="$platform-x64" ;; *) echo 'Unsupported CPU architecture.' >&2; exit 1 ;; esac
 dotnet publish "$source_root/Tools/GitChunk/GitChunk.csproj" -c Release -r "$rid" -p:Headless=true --self-contained true -o "$work/publish"
 install_dir="${GITCHUNK_INSTALL_DIR:-$HOME/.local/bin}"
 mkdir -p "$install_dir"

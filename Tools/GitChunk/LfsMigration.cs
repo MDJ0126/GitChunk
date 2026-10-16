@@ -72,7 +72,11 @@ static partial class GitIntegration
     {
         var expected = "#!/bin/sh\ncommand -v git-lfs >/dev/null 2>&1 || { printf >&2 \"\\nThis repository is configured for Git LFS but 'git-lfs' was not found on your path. If you no longer wish to use Git LFS, remove this hook by deleting the '" + name + "' file in the hooks directory (set by 'core.hookspath'; usually '.git/hooks').\\n\"; exit 2; }\ngit lfs " + name + " \"$@\"\n";
         var modern = expected.Replace("printf >&2 \"\\nThis", "printf >&2 \"\\n%s\\n\\n\" \"This").Replace("'.git/hooks').\\n\"", "'.git/hooks').\"");
-        return text.Replace("\r\n", "\n") == expected || text.Replace("\r\n", "\n") == modern;
+        // Ubuntu 24.04's Git LFS 3.4.1 emits echo; newer versions emit printf.
+        // Match the complete known hook so user-authored hook code stays protected.
+        var legacy = expected.Replace("printf >&2", "echo >&2");
+        var normalized = text.Replace("\r\n", "\n");
+        return normalized == expected || normalized == modern || normalized == legacy;
     }
     static void Install(string root)
     {

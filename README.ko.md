@@ -70,6 +70,8 @@ brew tap MDJ0126/gitchunk https://github.com/MDJ0126/GitChunk
 brew install --cask MDJ0126/gitchunk/git-chunk
 ```
 
+**Linux x64:** [ZIP 다운로드](https://github.com/MDJ0126/GitChunk/releases/latest/download/GitChunk-linux-x64.zip) 후 압축을 푼 폴더에서 `sh install.sh`를 실행하세요. Ubuntu/Debian에서는 먼저 `git python3-tk`를 설치하세요. 앱 메뉴의 **Git Chunk** 또는 `~/.local/bin/gitchunk`로 실행합니다. `git chunk` 명령을 사용하려면 `~/.local/bin`을 PATH에 추가하세요. .NET 런타임은 포함되어 있습니다. glibc 기반 리눅스용이며 Alpine/musl은 지원하지 않습니다.
+
 ### 2. 사용할 프로젝트에 적용
 
 Git Chunk 앱에서 프로젝트 폴더를 선택하고 **Install Git Chunk**를 누르세요. 또는 프로젝트의 Git 저장소 최상위 폴더에서 다음 명령을 실행하세요.

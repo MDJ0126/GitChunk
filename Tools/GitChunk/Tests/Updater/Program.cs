@@ -11,7 +11,7 @@ var exe = Path.GetFullPath(args[1]);
 byte[] archive;
 using (var memory = new MemoryStream()) {
     using (var zip = new ZipArchive(memory, ZipArchiveMode.Create, true)) {
-        using var entry = zip.CreateEntry("GitChunk.exe").Open();
+        using var entry = zip.CreateEntry(OperatingSystem.IsWindows() ? "GitChunk.exe" : OperatingSystem.IsLinux() ? "git-chunk" : "GitChunk.app/Contents/MacOS/GitChunk-cli").Open();
         entry.Write(File.ReadAllBytes(exe));
     }
     archive = memory.ToArray();
@@ -47,7 +47,8 @@ class Fixture(byte[] bytes, string scenario) : HttpMessageHandler
 {
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token) {
         var url = request.RequestUri!.AbsoluteUri;
-        var name = "GitChunk-Windows-x64.zip";
+        var arch = System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture == System.Runtime.InteropServices.Architecture.Arm64 ? "arm64" : "x64";
+        var name = OperatingSystem.IsWindows() ? "GitChunk-Windows-x64.zip" : $"GitChunk-{(OperatingSystem.IsLinux() ? "linux" : "osx")}-{arch}.zip";
         var baseUrl = "https://github.com/MDJ0126/GitChunk/releases/download/v1.3.0/";
         byte[] content;
         if (url.EndsWith("/latest")) content = JsonSerializer.SerializeToUtf8Bytes(new { tag_name = "v1.3.0", assets = new[] { new { name, browser_download_url = baseUrl + name }, new { name = "SHA256SUMS", browser_download_url = baseUrl + "SHA256SUMS" } } });
