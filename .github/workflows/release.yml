@@ -6,6 +6,10 @@ on:
         description: 'Release version (for example 1.0.0)'
         required: true
         default: '1.0.0'
+      refresh_assets:
+        description: 'Replace assets of the existing release without changing its version or tag'
+        type: boolean
+        default: false
 permissions:
   contents: read
 jobs:
@@ -93,6 +97,25 @@ jobs:
           pattern: release-*
           merge-multiple: true
           path: dist
+      - name: Refresh existing Linux package icon
+        if: inputs.refresh_assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          gh release download "v$VERSION" --pattern 'GitChunk-linux-*.zip' --dir dist
+          python3 - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile
+          for archive in Path('dist').glob('GitChunk-linux-*.zip'):
+              temporary = archive.with_suffix('.tmp')
+              with ZipFile(archive) as source, ZipFile(temporary, 'w') as target:
+                  assert 'AppIcon.png' in source.namelist()
+                  for entry in source.infolist():
+                      data = Path('Tools/GitChunk/Assets/AppIcon.png').read_bytes() if entry.filename == 'AppIcon.png' else source.read(entry)
+                      target.writestr(entry, data)
+              temporary.replace(archive)
+          PY
       - name: Generate verified package manifests
         env:
           VERSION: ${{ inputs.version }}
@@ -101,8 +124,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ inputs.version }}
+          REFRESH_ASSETS: ${{ inputs.refresh_assets }}
         run: |
-          gh release create "v$VERSION" dist/* packages/SHA256SUMS --target "$GITHUB_SHA" --title "Git Chunk $VERSION" --notes-file Packaging/RELEASE-NOTES.md
+          set -euo pipefail
+          if [ "$REFRESH_ASSETS" = 'true' ]; then
+            gh release upload "v$VERSION" dist/* packages/SHA256SUMS --clobber
+          else
+            gh release create "v$VERSION" dist/* packages/SHA256SUMS --target "$GITHUB_SHA" --title "Git Chunk $VERSION" --notes-file Packaging/RELEASE-NOTES.md
+          fi
           git config user.name github-actions
           git config user.email github-actions@users.noreply.github.com
           cp -R packages/bucket packages/Casks .

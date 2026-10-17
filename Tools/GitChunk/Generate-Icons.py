@@ -1,42 +1,37 @@
-"""Generate the shared geometric app icon (requires Pillow)."""
+"""Generate app icons from the README symbol (requires Pillow)."""
+import base64
+from io import BytesIO
 from pathlib import Path
-from PIL import Image, ImageDraw, ImageFilter
+import xml.etree.ElementTree as ET
+from PIL import Image
 
-root = Path(__file__).parent / "Assets"
+project = Path(__file__).resolve().parents[2]
+source = project / 'docs/assets/git-chunk-symbol.svg'
+svg = ET.parse(source).getroot()
+x, y, width, height = map(float, svg.attrib['viewBox'].split())
+embedded = svg.find('{http://www.w3.org/2000/svg}image')
+if embedded is None:
+    raise ValueError('README symbol must contain an embedded PNG image')
+href = embedded.attrib['href']
+if not href.startswith('data:image/png;base64,'):
+    raise ValueError('README symbol must contain a base64 PNG image')
+with Image.open(BytesIO(base64.b64decode(href.split(',', 1)[1]))) as original:
+    # Match the SVG viewport used by all README variants exactly.
+    sx = original.width / float(embedded.attrib['width'])
+    sy = original.height / float(embedded.attrib['height'])
+    symbol = original.convert('RGBA').crop((round(x*sx), round(y*sy), round((x+width)*sx), round((y+height)*sy)))
+
+root = Path(__file__).parent / 'Assets'
 root.mkdir(exist_ok=True)
-n = 1024
-image = Image.new("RGBA", (n, n))
-pixels = image.load()
-for y in range(n):
-    for x in range(n):
-        t = (x + y) / (2 * n)
-        pixels[x, y] = (int(42 - 19*t), int(114 - 50*t), int(248 - 35*t), 255)
-mask = Image.new("L", (n, n))
-ImageDraw.Draw(mask).rounded_rectangle((24, 24, 1000, 1000), radius=224, fill=255)
-image.putalpha(mask)
-shadow = Image.new("RGBA", (n,n))
-d = ImageDraw.Draw(shadow)
-for rect in [(220, 246, 488, 514), (220, 550, 488, 818), (530, 396, 798, 664)]:
-    d.rounded_rectangle(rect, radius=58, fill=(7, 24, 88, 100))
-image = Image.alpha_composite(image, shadow.filter(ImageFilter.GaussianBlur(26)))
-d = ImageDraw.Draw(image)
-# Two pieces align into a single piece: the same mark represents split and join.
-d.rounded_rectangle((214, 216, 478, 480), radius=54, fill=(255,255,255))
-d.rounded_rectangle((214, 524, 478, 788), radius=54, fill=(155,236,244))
-d.rounded_rectangle((554, 370, 818, 634), radius=54, fill=(255,255,255))
-# Subtle slots recall stacked resource files while staying legible at small sizes.
-for y in (292, 330, 368):
-    d.rounded_rectangle((282,y,410,y+15), radius=7, fill=(60,114,224))
-for y in (600,638,676):
-    d.rounded_rectangle((282,y,410,y+15), radius=7, fill=(31,130,161))
-for y in (446,484,522):
-    d.rounded_rectangle((622,y,750,y+15), radius=7, fill=(60,114,224))
-image.save(root / "AppIcon.png")
-image.save(root / "AppIcon.ico", sizes=[(s,s) for s in (16,24,32,48,64,128,256)])
-iconset = root / "AppIcon.iconset"
+image = Image.new('RGBA', (1024, 1024))
+symbol = symbol.resize((round(symbol.width * 960 / max(symbol.size)), round(symbol.height * 960 / max(symbol.size))), Image.Resampling.LANCZOS)
+image.alpha_composite(symbol, ((1024-symbol.width)//2, (1024-symbol.height)//2))
+image.save(root / 'AppIcon.png')
+image.save(root / 'AppIcon.ico', sizes=[(s,s) for s in (16,24,32,48,64,128,256)])
+iconset = root / 'AppIcon.iconset'
 iconset.mkdir(exist_ok=True)
 for size in (16,32,128,256,512):
     for scale in (1,2):
-        suffix = "@2x" if scale == 2 else ""
-        image.resize((size*scale,size*scale), Image.Resampling.LANCZOS).save(iconset / f"icon_{size}x{size}{suffix}.png")
-print("Generated Windows ICO, shared PNG, and macOS iconset.")
+        suffix = '@2x' if scale == 2 else ''
+        image.resize((size*scale,size*scale), Image.Resampling.LANCZOS).save(iconset / f'icon_{size}x{size}{suffix}.png')
+print(f'Generated Windows ICO, shared PNG, and macOS iconset from {source.name}.')
