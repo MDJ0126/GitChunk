@@ -1,7 +1,7 @@
 cask "git-chunk" do
   version "1.0.0"
   arch arm: "arm64", intel: "x64"
-  sha256 arm: "d4a5a2e670d060cfaf538d38db5e62289fad9f5fc76d2441204c603da3cc797d", intel: "61a5d99189912492747d9e5383db29feaa4807d7f6a2646dc1fc663b7bcae829"
+  sha256 arm: "0cd201030dbae59789cee9cf294526abf86e742fe3f78ae876682d0a8c38543a", intel: "bf114acf871d10f935fb022f66b2a1610d2acfa8c8193e636b5a2db53b6702ea"
   url "https://github.com/MDJ0126/GitChunk/releases/download/v#{version}/GitChunk-osx-#{arch}.zip"
   name "Git Chunk"
   desc "Git-native chunk storage for large files"
