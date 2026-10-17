@@ -11,12 +11,20 @@ var exe = Path.GetFullPath(args[1]);
 byte[] archive;
 using (var memory = new MemoryStream()) {
     using (var zip = new ZipArchive(memory, ZipArchiveMode.Create, true)) {
-        using var entry = zip.CreateEntry(OperatingSystem.IsWindows() ? "GitChunk.exe" : OperatingSystem.IsLinux() ? "git-chunk" : "GitChunk.app/Contents/MacOS/GitChunk-cli").Open();
+        using var entry = zip.CreateEntry(OperatingSystem.IsWindows() ? "git-chunk.exe" : OperatingSystem.IsLinux() ? "git-chunk" : "GitChunk.app/Contents/MacOS/GitChunk-cli").Open();
         entry.Write(File.ReadAllBytes(exe));
     }
     archive = memory.ToArray();
 }
-foreach (var scenario in new[] { "corrupt", "missing", "install-failure", "success" }) {
+foreach (var scenario in new[] { "corrupt", "missing", "install-failure", "success", "legacy" }) {
+    var download = archive;
+    if (scenario == "legacy" && OperatingSystem.IsWindows()) {
+        using var memory = new MemoryStream();
+        using (var zip = new ZipArchive(memory, ZipArchiveMode.Create, true)) {
+            using var entry = zip.CreateEntry("GitChunk.exe").Open(); entry.Write(File.ReadAllBytes(exe));
+        }
+        download = memory.ToArray();
+    }
     var folder = Path.Combine(fixture, scenario); Directory.CreateDirectory(folder);
     var cache = Path.Combine(folder, "cache");
     Environment.SetEnvironmentVariable("GITCHUNK_UPDATE_CACHE", cache);
@@ -25,11 +33,11 @@ foreach (var scenario in new[] { "corrupt", "missing", "install-failure", "succe
         using var git = Process.Start(new ProcessStartInfo("git") { ArgumentList = { "-C", root, "init" }, UseShellExecute = false })!;
         git.WaitForExit(); if (git.ExitCode != 0) throw new Exception("git init failed");
     }
-    using var client = new HttpClient(new Fixture(archive, scenario));
+    using var client = new HttpClient(new Fixture(download, scenario));
     var failed = false;
     try { await ToolUpdate.UpdateAsync(root, client); }
     catch (Exception) { failed = true; }
-    if (scenario == "success") {
+    if (scenario is "success" or "legacy") {
         if (failed || !File.Exists(Path.Combine(cache, "active.json")) || !File.Exists(Path.Combine(root, ".gitchunk/chunks.txt"))) throw new Exception("Update did not activate/install.");
         if (ToolUpdate.Forward(new[] { "version" }) != 0) throw new Exception("Old command did not forward to new version.");
         var active = JsonDocument.Parse(File.ReadAllText(Path.Combine(cache, "active.json")));

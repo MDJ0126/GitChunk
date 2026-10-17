@@ -41,7 +41,7 @@ jobs:
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           python Tools/GitChunk/Test-Identity.py publish/cli/GitChunk.exe
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
-          dotnet publish Tools/GitChunk/GitChunk.csproj -c Release -r win-x64 -p:Version=1.3.0 -o publish/updater-fixture
+          dotnet publish Tools/GitChunk/GitChunk.csproj -c Release -r win-x64 -p:Headless=true -p:Version=1.3.0 -o publish/updater-fixture
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           dotnet run --project Tools/GitChunk/Tests/Updater/Updater.csproj -- publish/updater-tests publish/updater-fixture/GitChunk.exe
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
@@ -53,11 +53,9 @@ jobs:
           GITCHUNK_VERSION: ${{ inputs.version }}
         run: |
           if ($env:GITCHUNK_VERSION -notmatch '^\d+\.\d+\.\d+$') { throw 'Invalid version' }
-          New-Item dist, publish/package -ItemType Directory -Force | Out-Null
-          Copy-Item publish/windows/GitChunk.exe publish/package/GitChunk.exe
-          Copy-Item publish/cli/GitChunk.exe publish/package/git-chunk.exe
-          Compress-Archive publish/package/* dist/GitChunk-Windows-x64.zip
-          & 'C:/Program Files (x86)/Inno Setup 6/ISCC.exe' Packaging/GitChunk.iss
+          ./Packaging/Build-Windows.ps1 -Version $env:GITCHUNK_VERSION
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python Packaging/Test-Windows-Packages.py dist
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
       - uses: actions/upload-artifact@v4
         with:

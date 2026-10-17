@@ -96,9 +96,9 @@ static class ToolUpdate
         var folder = Path.Combine(Cache, version + "-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(folder);
         using var zip = new ZipArchive(new MemoryStream(bytes));
-        var entryName = windows ? "GitChunk.exe" : OperatingSystem.IsLinux() ? "git-chunk" : "GitChunk.app/Contents/MacOS/GitChunk-cli";
-        var entry = zip.GetEntry(entryName) ?? throw new Exception("Executable missing from release.");
-        var executable = Path.Combine(folder, windows ? "GitChunk.exe" : "git-chunk");
+        var entryName = windows ? "git-chunk.exe" : OperatingSystem.IsLinux() ? "git-chunk" : "GitChunk.app/Contents/MacOS/GitChunk-cli";
+        var entry = zip.GetEntry(entryName) ?? (windows ? zip.GetEntry("GitChunk.exe") : null) ?? throw new Exception("Executable missing from release.");
+        var executable = Path.Combine(folder, windows ? "git-chunk.exe" : "git-chunk");
         entry.ExtractToFile(executable);
         if (!windows) File.SetUnixFileMode(executable, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
         var probe = new ProcessStartInfo(executable) { UseShellExecute = false, RedirectStandardOutput = true };

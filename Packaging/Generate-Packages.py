@@ -22,7 +22,6 @@ win = 'GitChunk-Windows-x64.zip'
     'homepage': 'https://github.com/MDJ0126/GitChunk',
     'architecture': {'64bit': {'url': f'{base}/{win}', 'hash': sha(win)}},
     'bin': [['git-chunk.exe', 'git-chunk']],
-    'shortcuts': [['GitChunk.exe', 'Git Chunk']],
 }, indent=2) + '\n', encoding='utf-8')
 arm, intel = 'GitChunk-osx-arm64.zip', 'GitChunk-osx-x64.zip'
 (output / 'Casks').mkdir(parents=True, exist_ok=True)

@@ -24,4 +24,6 @@ Linux verification: run `Mac/Test.py`, `Test-Rules.py`, `Test-Uninstall.py`, `Te
 
 ## Shared command registration (1.0.0 refresh)
 
-All platform packages use a shared installed command. `git chunk install` registers local filters/hooks without copying executables into the worktree or active Git runtime directory. Reapplying migrates old runtime copies into recovery archives under Git metadata and stages removal of old tracked tool copies. The Windows GUI remains bundled as Git Chunk Debug with unrestricted repository selection. The source-root GitChunk.exe is a debugging artifact. Linux packages are rebuilt and tested alongside Windows/macOS.
+All platform packages use a shared installed command. `git chunk install` registers local filters/hooks without copying executables into the worktree or active Git runtime directory. Reapplying migrates old runtime copies into recovery archives under Git metadata and stages removal of old tracked tool copies. The Windows GUI is distributed separately in GitChunk-Debug-Windows-x64.zip with unrestricted repository selection. The normal Windows installer and portable ZIP contain only the CLI. The source-root GitChunk.exe is a debugging artifact. Linux packages are rebuilt and tested alongside Windows/macOS.
+
+For Windows-only packaging changes, run **Refresh Windows packages**. This tests and replaces the Windows installer/portable/debug assets and regenerates checksums and Scoop metadata while retaining existing macOS/Linux binaries.

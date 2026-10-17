@@ -9,21 +9,21 @@ PrivilegesRequired=lowest
 OutputDir=..\dist
 OutputBaseFilename=GitChunk-Setup-win-x64
 SetupIconFile=..\Tools\GitChunk\Assets\AppIcon.ico
-UninstallDisplayIcon={app}\GitChunk.exe
+UninstallDisplayIcon={app}\bin\git-chunk.exe
+DisableProgramGroupPage=yes
 Compression=lzma2
 SolidCompression=yes
 ChangesEnvironment=yes
 [Files]
-Source: "..\publish\windows\GitChunk.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\publish\cli\GitChunk.exe"; DestDir: "{app}\bin"; DestName: "git-chunk.exe"; Flags: ignoreversion
-[Icons]
-Name: "{group}\Git Chunk Debug"; Filename: "{app}\GitChunk.exe"
+[InstallDelete]
+Type: files; Name: "{app}\GitChunk.exe"
+Type: files; Name: "{userprograms}\Git Chunk\Git Chunk.lnk"
+Type: files; Name: "{userprograms}\Git Chunk\Git Chunk Debug.lnk"
 [Tasks]
 Name: "addpath"; Description: "Add git chunk to the command line (recommended)"
 [Registry]
 Root: HKCU; Subkey: "Environment"; ValueType: expandsz; ValueName: "Path"; ValueData: "{olddata};{app}\bin"; Check: NeedsPath; Tasks: addpath
-[Run]
-Filename: "{app}\GitChunk.exe"; Description: "Open Git Chunk"; Flags: nowait postinstall skipifsilent
 [Code]
 function NeedsPath: Boolean;
 var CurrentPath: String;

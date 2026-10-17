@@ -1,0 +1,80 @@
+name: Refresh Windows packages
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  windows:
+    runs-on: windows-latest
+    env:
+      GITCHUNK_VERSION: '1.0.0'
+      GITCHUNK_SKIP_UPDATE_CHECK: '1'
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+      - name: Build command and optional debugger
+        shell: pwsh
+        run: |
+          dotnet publish Tools/GitChunk/GitChunk.csproj -c Release -r win-x64 -p:Version=1.0.0 -o publish/windows
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          dotnet publish Tools/GitChunk/GitChunk.csproj -c Release -r win-x64 -p:Headless=true -p:Version=1.0.0 -o publish/cli
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          dotnet publish Tools/GitChunk/GitChunk.csproj -c Release -r win-x64 -p:Headless=true -p:Version=1.3.0 -o publish/updater-fixture
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Verify shared command and updater
+        shell: pwsh
+        run: |
+          python Tools/GitChunk/Test-Shared.py publish/cli/GitChunk.exe
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          dotnet run --project Tools/GitChunk/Tests/Updater/Updater.csproj -- publish/updater-tests publish/updater-fixture/GitChunk.exe
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Build separate normal and debug packages
+        shell: pwsh
+        run: |
+          ./Packaging/Build-Windows.ps1 -Version 1.0.0
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python Packaging/Test-Windows-Packages.py dist
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Verify installer upgrade and separate debugger
+        shell: pwsh
+        run: |
+          $install = "$env:RUNNER_TEMP/cli-install"
+          New-Item $install -ItemType Directory -Force | Out-Null
+          Set-Content "$install/GitChunk.exe" 'old bundled GUI fixture'
+          $setup = Start-Process -FilePath "$pwd/dist/GitChunk-Setup-win-x64.exe" -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/TASKS=',"/DIR=$install" -Wait -PassThru -WindowStyle Hidden
+          if ($setup.ExitCode) { exit $setup.ExitCode }
+          if (Test-Path "$install/GitChunk.exe") { throw 'Installer retained bundled debug GUI' }
+          & "$install/bin/git-chunk.exe" version
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          Expand-Archive dist/GitChunk-Debug-Windows-x64.zip "$env:RUNNER_TEMP/debug"
+          $env:GITCHUNK_COMMAND = "$install/bin/git-chunk.exe"
+          $env:GITCHUNK_UPDATE_CACHE = "$env:RUNNER_TEMP/update-cache"
+          $repo = "$env:RUNNER_TEMP/debug-repository"
+          New-Item $repo -ItemType Directory -Force | Out-Null
+          git -C $repo init
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          $debug = Start-Process -FilePath "$env:RUNNER_TEMP/debug/GitChunk-Debug.exe" -ArgumentList 'ui-smoke',$repo -Wait -PassThru -WindowStyle Hidden
+          if ($debug.ExitCode) { exit $debug.ExitCode }
+      - name: Preserve other platforms and generate manifests
+        shell: pwsh
+        run: |
+          gh release download v1.0.0 --pattern 'GitChunk-osx-*.zip' --pattern 'GitChunk-linux-*.zip' --dir dist
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python Packaging/Generate-Packages.py 1.0.0 dist packages
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Refresh existing 1.0.0 Windows release assets
+        shell: pwsh
+        run: |
+          gh release upload v1.0.0 dist/GitChunk-Setup-win-x64.exe dist/GitChunk-Windows-x64.zip dist/GitChunk-Debug-Windows-x64.zip packages/SHA256SUMS --clobber
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          Copy-Item packages/bucket/git-chunk.json bucket/git-chunk.json -Force
+          git config user.name github-actions
+          git config user.email github-actions@users.noreply.github.com
+          git add bucket/git-chunk.json
+          git commit -m 'Separate optional Windows debug download for Git Chunk 1.0.0'
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          git push origin HEAD:main
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }

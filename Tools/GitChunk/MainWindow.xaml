@@ -11,7 +11,7 @@
   <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="155"/></Grid.RowDefinitions>
   <DockPanel Margin="0,0,0,22">
    <Image Source="Assets/AppIcon.png" Width="54" Height="54" Margin="0,0,14,0"/>
-   <StackPanel><TextBlock Text="Git Chunk" FontFamily="Segoe UI" FontSize="29" FontWeight="Bold"/><TextBlock Text="Install once. Use Git as usual." Foreground="#64748B" Margin="0,3,0,0"/></StackPanel>
+   <StackPanel><TextBlock Text="Git Chunk Debug" FontFamily="Segoe UI" FontSize="29" FontWeight="Bold"/><TextBlock Text="Optional diagnostics · install Git Chunk first." Foreground="#64748B" Margin="0,3,0,0"/></StackPanel>
   </DockPanel>
   <Border Grid.Row="1" Background="White" CornerRadius="12" BorderBrush="#E0E6EF" BorderThickness="1" Padding="20" Margin="0,0,0,16">
    <StackPanel>

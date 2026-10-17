@@ -44,7 +44,7 @@ partial class MainWindow : Window
     }
     async Task<string> Command(string command, string root, bool log = false)
     {
-        var info = new ProcessStartInfo(Environment.ProcessPath!) { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true, StandardOutputEncoding = Encoding.UTF8, StandardErrorEncoding = Encoding.UTF8, WorkingDirectory = root };
+        var info = new ProcessStartInfo(SharedTool.DebugCommand()) { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true, StandardOutputEncoding = Encoding.UTF8, StandardErrorEncoding = Encoding.UTF8, WorkingDirectory = root };
         info.ArgumentList.Add(command); info.ArgumentList.Add(root);
         using var child = Process.Start(info) ?? throw new Exception("Could not start the executable.");
         var output = child.StandardOutput.ReadToEndAsync(); var errors = child.StandardError.ReadToEndAsync();
