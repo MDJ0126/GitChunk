@@ -5,7 +5,7 @@
   "architecture": {
     "64bit": {
       "url": "https://github.com/MDJ0126/GitChunk/releases/download/v1.0.0/GitChunk-Windows-x64.zip",
-      "hash": "d4bbf8832d46b766397117b133864dd162473c39629e2dfc3b2293f9655ef456"
+      "hash": "f0bf7e5cf0c729ea569d14d393e7499766bde9ed98e274b5ce9ee85f3abf1eb9"
     }
   },
   "bin": [
