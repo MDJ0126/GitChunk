@@ -40,7 +40,7 @@ static partial class GitIntegration
         }
         // Preserve the complete legacy directory (including unknown files) in
         // Git's local metadata. Only its visible working-tree name disappears.
-        var runtimeDirectory = Path.GetDirectoryName(RuntimeTool())!;
+        var runtimeDirectory = Path.GetDirectoryName(LegacyRuntimeTool())!;
         var backup = Path.GetFullPath(Path.Combine(runtimeDirectory, "legacy-storage-" + Guid.NewGuid().ToString("N")));
         if (!backup.StartsWith(Path.GetFullPath(runtimeDirectory) + Path.DirectorySeparatorChar, FileSystemPaths.Comparison)) throw new Exception("Invalid legacy backup path.");
         Directory.CreateDirectory(runtimeDirectory);

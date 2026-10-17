@@ -34,6 +34,7 @@ with tempfile.TemporaryDirectory(prefix='GitChunk-identity-') as folder:
     assert run(root, tool, 'git-smudge', data=legacy).stdout == data
     run(root, tool, 'git-install', str(root))
     assert not (root / '.resourcesplitter').exists()
+    assert any((root / '.git/gitchunk').glob('legacy-storage-*'))
     assert run(root, tool, 'git-smudge', data=legacy).stdout == data
     # Updating a repository keeps committed originals intact. Renormalization
     # then converts the current index without changing historical pointers.
