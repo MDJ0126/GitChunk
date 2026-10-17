@@ -121,3 +121,9 @@ By default, files **over 50 MiB** are split into chunks of up to **49 MiB**. Use
 [Detailed usage and uninstall](https://mdj0126.github.io/GitChunk/guide.html) · [Distribution](Packaging/README.md) · [Technical notes](INSTRUCTIONS.md)
 
 Comparison references: [Git LFS documentation](https://github.com/git-lfs/git-lfs/blob/main/docs/man/git-lfs.adoc), [GitHub LFS storage and billing](https://docs.github.com/en/billing/concepts/product-billing/git-lfs).
+
+### Shared installation and debugging
+
+Install Git Chunk once on each computer, then run `git chunk install` in each repository. This registers repository-local filters and hooks that call the shared executable; no EXE is copied into the repository. Re-run the command to migrate older installations; retired binaries are preserved in local Git metadata for recovery.
+
+`GitChunk.exe` is the optional Windows debugging GUI, included in the installer and portable ZIP. It lets you select any repository and inspect logs. The copy at this source repository’s root is for project debugging. Keep portable packages in a permanent location because registered filters reference their command path.

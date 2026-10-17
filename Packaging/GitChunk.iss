@@ -17,7 +17,7 @@ ChangesEnvironment=yes
 Source: "..\publish\windows\GitChunk.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\publish\cli\GitChunk.exe"; DestDir: "{app}\bin"; DestName: "git-chunk.exe"; Flags: ignoreversion
 [Icons]
-Name: "{group}\Git Chunk"; Filename: "{app}\GitChunk.exe"
+Name: "{group}\Git Chunk Debug"; Filename: "{app}\GitChunk.exe"
 [Tasks]
 Name: "addpath"; Description: "Add git chunk to the command line (recommended)"
 [Registry]

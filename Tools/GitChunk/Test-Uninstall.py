@@ -51,7 +51,9 @@ with tempfile.TemporaryDirectory(prefix='GitChunk-uninstall-') as temp:
     os.environ['PATH'] = str(command_dir) + os.pathsep + os.environ['PATH']
     for staged in (False, True):
         root = base / ('updated-staged' if staged else 'updated'); init(root); commit(root)
-        runtime = next((root / '.gitchunk').glob('GitChunk*'))
+        runtime = root / '.gitchunk' / ('GitChunk.exe' if os.name == 'nt' else 'GitChunk-linux-x64')
+        shutil.copy2(tool, runtime)
+        commit(root)
         updated = runtime.read_bytes() + b'updated runtime regression fixture'
         runtime.write_bytes(updated)
         if staged:
@@ -87,7 +89,7 @@ with tempfile.TemporaryDirectory(prefix='GitChunk-uninstall-') as temp:
     (root / '.git/index.lock').unlink()
     # Execute directly from the repository tool to cover Windows executable locks.
     repo_tool = root / '.gitchunk' / ('GitChunk.exe' if os.name == 'nt' else 'GitChunk-' + ('linux-' if sys.platform.startswith('linux') else 'osx-') + ('arm64' if os.uname().machine in ('arm64', 'aarch64') else 'x64'))
-    run(root, str(repo_tool), 'uninstall', str(root))
+    run(root, tool, 'uninstall', str(root))
     assert not (root / '.gitchunk').exists() and not (root / '.chunkignore').exists()
     assert (root / '.git/hooks/pre-push').read_bytes() == custom
     assert not (root / '.git/hooks/pre-commit').exists()

@@ -15,28 +15,19 @@ partial class MainWindow : Window
     bool busy, dirty, loading;
     string installation = "unknown", loadedRoot = "";
     int revision;
-    readonly string? repositoryRoot;
-    public MainWindow(string? executablePath = null)
+    public MainWindow()
     {
-        repositoryRoot = RepositoryContext.FromExecutable(executablePath ?? Environment.ProcessPath!);
         InitializeComponent();
         ApplyState();
-        FolderPath.TextChanged += async (_, _) => {
-            if (repositoryRoot != null && FolderPath.Text != repositoryRoot) { FolderPath.Text = repositoryRoot; return; }
-            await RefreshInstallation();
-        };
+        FolderPath.TextChanged += async (_, _) => await RefreshInstallation();
         Activated += async (_, _) => { if (!busy) await RefreshInstallation(); };
-        FolderPath.Text = repositoryRoot ?? Directory.GetCurrentDirectory();
-        Append(repositoryRoot != null ? "This copy is bound to its repository. Use the standalone app to manage another repository." : "Select a repository, save your rules, and install Git Chunk. Existing LFS files are converted and staged automatically; commit or stash tracked changes first. Past LFS history and server storage are preserved.");
+        FolderPath.Text = Directory.GetCurrentDirectory();
+        Append("Select a repository, save your rules, and install Git Chunk. Existing LFS files are converted and staged automatically; commit or stash tracked changes first. Past LFS history and server storage are preserved.");
     }
-    string Root() => repositoryRoot ?? Path.TrimEndingDirectorySeparator(Path.GetFullPath(FolderPath.Text.Trim().Trim('"')));
+    string Root() => Path.TrimEndingDirectorySeparator(Path.GetFullPath(FolderPath.Text.Trim().Trim('"')));
     bool ValidRepository => installation is "installed" or "incomplete" or "legacy" or "not-installed";
     void ApplyState()
     {
-        FolderPath.IsReadOnly = repositoryRoot != null;
-        FolderPath.IsEnabled = !busy;
-        BrowseButton.IsEnabled = !busy && repositoryRoot == null;
-        AllowDrop = !busy && repositoryRoot == null;
         RunButton.Content = installation == "installed" ? "Reinstall this version  →" : installation == "legacy" ? "Upgrade to Git Chunk  →" : "Install Git Chunk  →";
         RunButton.IsEnabled = !busy && ValidRepository;
         UninstallButton.IsEnabled = !busy && installation is "installed" or "incomplete" or "legacy";
@@ -93,7 +84,6 @@ partial class MainWindow : Window
     void SaveRules(object sender, RoutedEventArgs e) { try { StoreRules(); } catch (Exception ex) { Append(ex.Message); } }
     async void Browse(object sender, RoutedEventArgs e)
     {
-        if (busy || repositoryRoot != null) return;
         if (dirty && MessageBox.Show(this, "Discard unsaved rules and switch folders?", "Git Chunk", MessageBoxButton.YesNo) != MessageBoxResult.Yes) return;
         var picker = new OpenFolderDialog { Title = "Select Git repository root", Multiselect = false };
         if (Directory.Exists(FolderPath.Text)) picker.InitialDirectory = FolderPath.Text;
@@ -105,13 +95,13 @@ partial class MainWindow : Window
         if (busy) return;
         try {
             await RefreshInstallation(); if (!ValidRepository) throw new Exception("Select the repository root.");
-            StoreRules(); busy = true; ApplyState();
+            StoreRules(); busy = true; ApplyState(); FolderPath.IsEnabled = BrowseButton.IsEnabled = false;
             Progress.Visibility = Visibility.Visible; Progress.IsIndeterminate = true; StatusText.Text = "Updating to latest release…";
             await Command("update", Root(), true);
             StatusText.Text = "Program and repository updated";
             Append("Future git chunk commands use the updated version. Reopen the app to use the updated Windows interface.");
         } catch (Exception ex) { StatusText.Text = "Update failed"; Append(ex.Message); }
-        finally { busy = false; ApplyState(); Progress.IsIndeterminate = false; Progress.Visibility = Visibility.Collapsed; await RefreshInstallation(); }
+        finally { busy = false; FolderPath.IsEnabled = BrowseButton.IsEnabled = true; Progress.IsIndeterminate = false; Progress.Visibility = Visibility.Collapsed; await RefreshInstallation(); }
     }
     async void Uninstall(object sender, RoutedEventArgs e) => await RemoveInstallation();
     async Task RemoveInstallation()
@@ -119,30 +109,30 @@ partial class MainWindow : Window
         if (busy) return;
         try {
             await RefreshInstallation(); if (!ValidRepository) throw new Exception("Select the repository root.");
-            busy = true; ApplyState();
+            busy = true; ApplyState(); FolderPath.IsEnabled = BrowseButton.IsEnabled = false;
             Progress.Visibility = Visibility.Visible; Progress.IsIndeterminate = true; StatusText.Text = "Uninstalling…";
             await Command("git-uninstall", Root(), true);
             dirty = false; loadedRoot = ""; StatusText.Text = "Git Chunk uninstalled";
         } catch (Exception ex) { StatusText.Text = "Uninstall failed"; Append(ex.Message); }
-        finally { busy = false; ApplyState(); Progress.IsIndeterminate = false; Progress.Visibility = Visibility.Collapsed; await RefreshInstallation(); }
+        finally { busy = false; FolderPath.IsEnabled = BrowseButton.IsEnabled = true; Progress.IsIndeterminate = false; Progress.Visibility = Visibility.Collapsed; await RefreshInstallation(); }
     }
     async Task Install()
     {
         if (busy) return;
         try {
             await RefreshInstallation(); if (!ValidRepository) throw new Exception("Select the root folder of your Git repository.");
-            StoreRules(); busy = true; ApplyState();
+            StoreRules(); busy = true; ApplyState(); FolderPath.IsEnabled = BrowseButton.IsEnabled = false;
             Progress.Visibility = Visibility.Visible; Progress.IsIndeterminate = true; StatusText.Text = "Installing…";
             await Command("git-install", Root(), true);
             StatusText.Text = "Git Chunk installed";
             Append("After first installation or changing rules:\ngit add -u\ngit add --renormalize .\ngit add .gitattributes .gitignore .gitchunk\ngit commit -m \"Configure Git Chunk\"\nThen commit, push and pull as usual.");
         } catch (Exception ex) { StatusText.Text = "Operation failed"; Append(ex.Message); }
-        finally { busy = false; ApplyState(); Progress.IsIndeterminate = false; Progress.Visibility = Visibility.Collapsed; await RefreshInstallation(); }
+        finally { busy = false; FolderPath.IsEnabled = BrowseButton.IsEnabled = true; Progress.IsIndeterminate = false; Progress.Visibility = Visibility.Collapsed; await RefreshInstallation(); }
     }
     void Append(string text) { Log.AppendText($"[{DateTime.Now:HH:mm:ss}] {text}{Environment.NewLine}"); Log.ScrollToEnd(); }
     void CopyLog(object sender, RoutedEventArgs e) { try { Clipboard.SetText(Log.Text); } catch (Exception ex) { Append(ex.Message); } }
-    void OnDragOver(object sender, DragEventArgs e) { e.Effects = !busy && repositoryRoot == null && e.Data.GetDataPresent(DataFormats.FileDrop) ? DragDropEffects.Copy : DragDropEffects.None; e.Handled = true; }
-    void OnDrop(object sender, DragEventArgs e) { if (!busy && repositoryRoot == null && e.Data.GetData(DataFormats.FileDrop) is string[] paths && paths.Length == 1 && Directory.Exists(paths[0])) FolderPath.Text = paths[0]; e.Handled = true; }
+    void OnDragOver(object sender, DragEventArgs e) { e.Effects = !busy && e.Data.GetDataPresent(DataFormats.FileDrop) ? DragDropEffects.Copy : DragDropEffects.None; e.Handled = true; }
+    void OnDrop(object sender, DragEventArgs e) { if (!busy && e.Data.GetData(DataFormats.FileDrop) is string[] paths && paths.Length == 1 && Directory.Exists(paths[0])) FolderPath.Text = paths[0]; e.Handled = true; }
     void OnClosing(object? sender, CancelEventArgs e) { if (busy) { e.Cancel = true; StatusText.Text = "Wait for the current operation to finish before closing."; } else if (dirty && MessageBox.Show(this, "Discard unsaved rules and close?", "Git Chunk", MessageBoxButton.YesNo) != MessageBoxResult.Yes) e.Cancel = true; }
     internal static int Preview(string path)
     {
@@ -175,35 +165,23 @@ partial class MainWindow : Window
     {
         var app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
         app.Startup += (_, _) => {
-        try {
-            root = Path.GetFullPath(root);
-            var other = Path.Combine(root, "other");
-            Directory.CreateDirectory(other);
-            foreach (var relative in new[] { ".gitchunk/GitChunk.exe", ".git/gitchunk/GitChunk.exe", ".git/worktrees/linked/gitchunk/GitChunk.exe" }) {
-                var executable = Path.Combine(root, relative);
-                Directory.CreateDirectory(Path.GetDirectoryName(executable)!);
-                if (relative.Contains("worktrees")) File.WriteAllText(Path.Combine(root, ".git/worktrees/linked/gitdir"), Path.Combine(root, ".git"));
-                var window = new MainWindow(executable);
-                if (window.Root() != root || window.FolderPath.Text != root || !window.FolderPath.IsReadOnly || window.BrowseButton.IsEnabled || window.AllowDrop)
-                    throw new Exception("Repository context was not locked: " + relative);
+            try {
+                root = Path.GetFullPath(root); Directory.CreateDirectory(root);
+                var other = Path.Combine(root, "other"); Directory.CreateDirectory(other);
+                var window = new MainWindow();
+                window.FolderPath.Text = root;
+                if (window.Root() != root || window.FolderPath.IsReadOnly || !window.BrowseButton.IsEnabled || !window.AllowDrop)
+                    throw new Exception("Debug GUI must allow repository selection.");
                 window.FolderPath.Text = other;
-                window.Browse(window, new RoutedEventArgs());
-                if (window.Root() != root || window.FolderPath.Text != root) throw new Exception("Repository context changed.");
-                window.busy = true; window.ApplyState(); window.busy = false; window.ApplyState();
-                if (!window.FolderPath.IsReadOnly || window.BrowseButton.IsEnabled || window.AllowDrop) throw new Exception("Repository lock lost after operation.");
+                if (window.Root() != other) throw new Exception("Debug GUI repository selection failed.");
                 window.Close();
-            }
-            var standalone = new MainWindow(Path.Combine(root, "GitChunk.exe"));
-            standalone.FolderPath.Text = other;
-            if (standalone.Root() != other || standalone.FolderPath.IsReadOnly || !standalone.BrowseButton.IsEnabled || !standalone.AllowDrop)
-                throw new Exception("Standalone repository selection was disabled.");
-            standalone.Close();
-            Console.WriteLine("PASS: repository-local paths locked, linked worktrees supported, standalone selection preserved.");
-            app.Shutdown(0);
-        } catch (Exception ex) { Console.Error.WriteLine(ex); app.Shutdown(1); }
+                Console.WriteLine("PASS: debugging GUI permits custom repository selection.");
+                app.Shutdown(0);
+            } catch (Exception ex) { Console.Error.WriteLine(ex); app.Shutdown(1); }
         };
         return app.Run();
     }
+
 }
 static class ConsoleHost
 {

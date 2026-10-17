@@ -121,3 +121,9 @@ git chunk update
 [상세 사용법 및 제거 방법](https://mdj0126.github.io/GitChunk/guide.ko.html) · [배포 정보](Packaging/README.md) · [기술 설명](INSTRUCTIONS.md)
 
 비교 참고: [Git LFS 공식 문서](https://github.com/git-lfs/git-lfs/blob/main/docs/man/git-lfs.adoc), [GitHub LFS 용량·요금 안내](https://docs.github.com/en/billing/concepts/product-billing/git-lfs).
+
+### 공용 설치와 디버깅
+
+PC마다 Git Chunk를 한 번 설치하고, 각 저장소에서 `git chunk install`을 실행합니다. 저장소에는 공용 실행 파일을 호출하는 필터와 훅만 등록하며 EXE를 복사하지 않습니다. 이전 설치도 같은 명령으로 전환할 수 있습니다. 기존 실행 파일은 복구를 위해 로컬 Git 메타데이터에 보관합니다.
+
+`GitChunk.exe`는 저장소를 자유롭게 선택하고 로그를 확인하는 Windows 디버깅 GUI입니다. 설치 파일과 포터블 ZIP에 함께 포함하며, 이 소스 저장소 최상위의 복사본은 프로젝트 디버깅용입니다. 포터블 패키지는 등록된 명령 경로가 유지되도록 고정된 위치에 보관해 주세요.

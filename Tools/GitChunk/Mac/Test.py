@@ -60,9 +60,9 @@ with tempfile.TemporaryDirectory(prefix="GitChunk-native-") as temp:
         "GitChunk.exe" if os.name == "nt" else
         "GitChunk-" + ("linux-" if sys.platform.startswith("linux") else "osx-") + ("arm64" if os.uname().machine in ("arm64", "aarch64") else "x64")
     )
-    assert installed.exists()
+    assert not installed.exists()
     if os.name != "nt":
-        assert os.access(installed, os.X_OK)
+        assert os.access(tool, os.X_OK)
         assert os.access(writer / ".git/hooks/pre-commit", os.X_OK)
     run(writer, "git", "add", ".")
     run(writer, "git", "commit", "-m", "native test")

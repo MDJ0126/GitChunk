@@ -132,6 +132,7 @@ static partial class GitIntegration
                 string settings; try { settings = Text("config", "--local", "--get-regexp", "^filter\\." + driver + "\\.(clean|smudge)$"); } catch { settings = ""; }
                 if (settings.Length == 0) { try { Text("config", "--local", "--unset-all", "filter." + driver + ".required"); } catch { } }
             }
+            try { Text("config", "--local", "--unset-all", "gitchunk.executable"); } catch { }
             foreach (var path in managedHooks) File.Delete(path);
             foreach (var original in originals) {
                 if (original.PointerBackup != null) File.Copy(original.Restored, original.Path, true);

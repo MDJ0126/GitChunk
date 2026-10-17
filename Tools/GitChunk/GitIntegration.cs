@@ -15,7 +15,12 @@ static partial class GitIntegration
     const string Store = ProjectIdentity.Objects;
     static string InstalledToolName => OperatingSystem.IsWindows() ? "GitChunk.exe" : "GitChunk-" + (OperatingSystem.IsLinux() ? "linux-" : "osx-") + (RuntimeInformation.ProcessArchitecture == Architecture.Arm64 ? "arm64" : "x64");
     static string Quote(string path) => "'" + path.Replace('\\', '/').Replace("'", "'\\''") + "'";
-    static string RuntimeTool() => Path.Combine(Path.GetFullPath(Text("rev-parse", "--git-path", ProjectIdentity.Id)), InstalledToolName);
+    static string LegacyRuntimeTool() => Path.Combine(Path.GetFullPath(Text("rev-parse", "--git-path", ProjectIdentity.Id)), InstalledToolName);
+    static string RuntimeTool()
+    {
+        try { var configured = Text("config", "--local", "--get", "gitchunk.executable"); if (Path.IsPathFullyQualified(configured)) return configured; } catch { }
+        return LegacyRuntimeTool();
+    }
     static void MigrateLegacyStorage(string root)
     {
         var legacy = SafePath(root, ProjectIdentity.LegacyStorage);
@@ -434,28 +439,9 @@ static partial class GitIntegration
             var path = Path.Combine(hooks, name);
             if (File.Exists(path) && !File.ReadAllText(path).Contains(ProjectIdentity.ManagedHook) && !File.ReadAllText(path).Contains(ProjectIdentity.LegacyManagedHook) && !StandardLfsHook(File.ReadAllText(path), name)) throw new Exception("Existing hook must be integrated manually: " + path);
         }
-        var tool = Path.Combine(actual, ProjectIdentity.Storage, InstalledToolName);
-        if (Directory.Exists(Path.GetDirectoryName(tool)) && (File.GetAttributes(Path.GetDirectoryName(tool)!) & FileAttributes.ReparsePoint) != 0) throw new Exception("Tool directory cannot be a symbolic link/junction.");
-        Directory.CreateDirectory(Path.GetDirectoryName(tool)!);
+        var runtime = SharedTool.Executable();
         ChunkIgnore.EnsureDefaults(actual);
-        var source = Environment.ProcessPath ?? throw new Exception("Executable path unavailable.");
-        if (!source.Equals(tool, FileSystemPaths.Comparison)) File.Copy(source, tool, true);
-        if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(tool, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute | UnixFileMode.GroupRead | UnixFileMode.GroupExecute | UnixFileMode.OtherRead | UnixFileMode.OtherExecute);
-        // Keep the installed runtime outside checkout-controlled files, so switching
-        // to a commit from before Git Chunk cannot remove the active filter binary.
-        var runtime = RuntimeTool(); Directory.CreateDirectory(Path.GetDirectoryName(runtime)!);
-        if (!source.Equals(runtime, FileSystemPaths.Comparison))
-        {
-            try { File.Copy(source, runtime, true); }
-            catch (IOException) when (OperatingSystem.IsWindows() && File.Exists(runtime))
-            {
-                // Windows permits renaming an executable still used by a filter.
-                // Retain it until the running process finishes; new calls use the update.
-                File.Move(runtime, runtime + ".previous-" + Guid.NewGuid().ToString("N"));
-                File.Copy(source, runtime, false);
-            }
-        }
-        if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(runtime, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute | UnixFileMode.GroupRead | UnixFileMode.GroupExecute | UnixFileMode.OtherRead | UnixFileMode.OtherExecute);
+        Text("config", "--local", "gitchunk.executable", runtime);
         var attributes = Path.Combine(actual, ".gitattributes");
         var old = File.Exists(attributes) ? File.ReadAllText(attributes) : "";
         if (!old.Contains(ProjectIdentity.AutomaticStorage)) File.AppendAllText(attributes,
@@ -482,7 +468,10 @@ static partial class GitIntegration
         foreach (var (name, command) in new[] { ("pre-commit", "git-prepare"), ("pre-push", "git-check-push") })
         {
             var hook = Path.Combine(hooks, name);
-            if (File.Exists(hook) && StandardLfsHook(File.ReadAllText(hook), name)) File.Copy(hook, Path.Combine(Path.GetDirectoryName(runtime)!, name + ".lfs-backup"), true);
+            if (File.Exists(hook) && StandardLfsHook(File.ReadAllText(hook), name)) {
+                var backup = Path.GetFullPath(Text("rev-parse", "--git-path", ProjectIdentity.Id + "/" + name + ".lfs-backup"));
+                Directory.CreateDirectory(Path.GetDirectoryName(backup)!); File.Copy(hook, backup, true);
+            }
             File.WriteAllText(hook, "#!/bin/sh\n# GitChunk managed hook\nexec " + Quote(runtime) + " " + command + "\n", new UTF8Encoding(false));
             if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(hook, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute | UnixFileMode.GroupRead | UnixFileMode.GroupExecute | UnixFileMode.OtherRead | UnixFileMode.OtherExecute);
         }
@@ -524,7 +513,19 @@ static partial class GitIntegration
             Directory.Move(presets, backup);
             Console.WriteLine("Old presets backed up: " + backup);
         }
-        Console.WriteLine("Git Chunk installed. Run git add -u, then git add --renormalize . and commit the configuration and tool. Install once on each new computer.");
+        // Retire old repository-local binaries only after the shared hooks/filters work.
+        var retired = new[] { ProjectIdentity.Storage, ProjectIdentity.LegacyStorage }
+            .SelectMany(folder => Directory.Exists(Path.Combine(actual, folder)) ? Directory.GetFiles(Path.Combine(actual, folder)) : Array.Empty<string>())
+            .Where(file => ToolPath(Path.GetRelativePath(actual, file).Replace('\\', '/'))).Append(LegacyRuntimeTool());
+        foreach (var file in retired.Distinct(FileSystemPaths.Comparer)) if (File.Exists(file)) {
+            var backup = Path.GetFullPath(Text("rev-parse", "--git-path", "gitchunk/retired-" + Guid.NewGuid().ToString("N") + "/" + Path.GetFileName(file)));
+            Directory.CreateDirectory(Path.GetDirectoryName(backup)!); File.Move(file, backup);
+            if (file.StartsWith(actual + Path.DirectorySeparatorChar + ProjectIdentity.Storage + Path.DirectorySeparatorChar, FileSystemPaths.Comparison)
+                || file.StartsWith(actual + Path.DirectorySeparatorChar + ProjectIdentity.LegacyStorage + Path.DirectorySeparatorChar, FileSystemPaths.Comparison))
+                Text("update-index", "--force-remove", "--", Path.GetRelativePath(actual, file).Replace('\\', '/'));
+        }
+        Console.WriteLine("Git Chunk configured using shared executable: " + runtime);
+        Console.WriteLine("Run git add -u, then git add --renormalize . and commit the configuration. No executable is copied into this repository.");
     }
     static void InstallationStatus(string root)
     {

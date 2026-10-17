@@ -21,3 +21,7 @@ Build locally with `python3 Tools/GitChunk/Linux/Build.py linux-x64`. This creat
 For the existing v1.0.0 release, upload the Linux ZIP, extend SHA256SUMS while preserving every existing entry, and append Linux installation/validation information to the release body. Preserve the existing tag and Windows/macOS asset IDs and hashes. Linux source is linked to its main-branch commit because the original v1.0.0 tag is unchanged.
 
 Linux verification: run `Mac/Test.py`, `Test-Rules.py`, `Test-Uninstall.py`, `Test-Identity.py`, `Linux/Test-Lfs.py`, and `Linux/Test-Gui.py` against the extracted CLI/package. Run the cross-platform `Tests/Updater` fixture with a Linux 1.3.0 fixture executable; these test versions are never published. Use Xvfb for the GUI test on a headless Linux machine.
+
+## Shared command registration (1.0.0 refresh)
+
+All platform packages use a shared installed command. `git chunk install` registers local filters/hooks without copying executables into the worktree or active Git runtime directory. Reapplying migrates old runtime copies into recovery archives under Git metadata and stages removal of old tracked tool copies. The Windows GUI remains bundled as Git Chunk Debug with unrestricted repository selection. The source-root GitChunk.exe is a debugging artifact. Linux packages are rebuilt and tested alongside Windows/macOS.
