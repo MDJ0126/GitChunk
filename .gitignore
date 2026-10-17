@@ -5,6 +5,7 @@ Tools/GitChunk/Tests/**/obj/
 /dist/
 /publish/
 /packages/
+/GitChunk.exe
 
 # GitChunk chunk cache (required chunks are staged by the hook)
 /.gitchunk/objects/

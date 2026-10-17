@@ -271,6 +271,7 @@ class Program
         if (args.Length == 0) return new System.Windows.Application().Run(new MainWindow());
         if (args[0] == "ui-preview" && args.Length == 2) return MainWindow.Preview(args[1]);
         if (args[0] == "ui-smoke" && args.Length == 2) return MainWindow.Smoke(args[1]);
+        if (args[0] == "ui-context-smoke" && args.Length == 2) return MainWindow.ContextSmoke(args[1]);
         ConsoleHost.AttachIfNeeded();
 #else
         Console.OutputEncoding = new System.Text.UTF8Encoding(false);

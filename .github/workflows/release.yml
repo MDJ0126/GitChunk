@@ -29,6 +29,8 @@ jobs:
           if ($env:GITCHUNK_VERSION -notmatch '^\d+\.\d+\.\d+$') { throw 'Invalid version' }
           dotnet publish Tools/GitChunk/GitChunk.csproj -c Release -r win-x64 -p:Version=$env:GITCHUNK_VERSION -o publish/windows
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          $contextTest = Start-Process -FilePath "$pwd/publish/windows/GitChunk.exe" -ArgumentList 'ui-context-smoke',"$env:RUNNER_TEMP/repository-context" -WindowStyle Hidden -Wait -PassThru
+          if ($contextTest.ExitCode) { exit $contextTest.ExitCode }
           dotnet publish Tools/GitChunk/GitChunk.csproj -c Release -r win-x64 -p:Headless=true -p:Version=$env:GITCHUNK_VERSION -o publish/cli
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           python Tools/GitChunk/Test-Rules.py publish/cli/GitChunk.exe
